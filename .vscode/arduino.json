@@ -1,6 +1,5 @@
 {
-    "sketch": "FlightSoftware.ino",
-    "port": "COM1",
-    "board": "teensy:avr:teensy41",
-    "configuration": "usb=serial,speed=600,opt=o2std,keys=en-us"
+    "sketch": "FlightSoftware\\FlightSoftware.ino",
+    "configuration": "usb=serial,speed=600,opt=o2std,keys=en-us",
+    "board": "teensy:avr:teensy41"
 }
