@@ -12,7 +12,7 @@
             ],
             "intelliSenseMode": "gcc-x64",
             "includePath": [
-                "C:\\Users\\kessistj\\AppData\\Local\\Temp\\arduino\\sketches\\252E2016F87ACBDF934570143A4A1BF1\\pch",
+                "C:\\Users\\kessistj\\AppData\\Local\\Temp\\arduino\\sketches\\AF97CF74D05F1CC9DECAAA380A4793D5\\pch",
                 "C:\\Users\\kessistj\\AppData\\Local\\Arduino15\\packages\\teensy\\hardware\\avr\\1.58.1\\cores\\teensy4",
                 "c:\\users\\kessistj\\appdata\\local\\arduino15\\packages\\teensy\\tools\\teensy-compile\\11.3.1\\arm\\arm-none-eabi\\include\\c++\\11.3.1",
                 "c:\\users\\kessistj\\appdata\\local\\arduino15\\packages\\teensy\\tools\\teensy-compile\\11.3.1\\arm\\arm-none-eabi\\include\\c++\\11.3.1\\arm-none-eabi",
@@ -22,7 +22,7 @@
                 "c:\\users\\kessistj\\appdata\\local\\arduino15\\packages\\teensy\\tools\\teensy-compile\\11.3.1\\arm\\arm-none-eabi\\include"
             ],
             "forcedInclude": [
-                "C:\\Users\\kessistj\\AppData\\Local\\Temp\\arduino\\sketches\\252E2016F87ACBDF934570143A4A1BF1\\pch\\Arduino.h"
+                "C:\\Users\\kessistj\\AppData\\Local\\Temp\\arduino\\sketches\\AF97CF74D05F1CC9DECAAA380A4793D5\\pch\\Arduino.h"
             ],
             "cStandard": "c11",
             "cppStandard": "c++14",
@@ -30,7 +30,7 @@
                 "__IMXRT1062__",
                 "TEENSYDUINO=158",
                 "ARDUINO=10607",
-                "ARDUINO_TEENSY40",
+                "ARDUINO_TEENSY41",
                 "F_CPU=600000000",
                 "USB_SERIAL",
                 "LAYOUT_US_ENGLISH",
