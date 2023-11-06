@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QGridLayout, QVBo
 from PyQt5.QtGui import QColor, QPainter
 import pyqtgraph as pg
 from pyqtgraph import PlotWidget, plot
+import numpy as np
 
 #default_color = "#A86C6C"
 default_color = '#14FF00'
@@ -22,16 +23,21 @@ pen2 = pg.mkPen(color=(graph_color2),width=5)
 #define some custom label classes a
 
 class TelemetryGraph(PlotWidget):
-    def __init__(self, title, x,y,ylabel, parent=None):
+    def __init__(self, title,x, y,ylabel,units, parent=None):
         super().__init__(parent)
         self.setBackground('w')
         self.setTitle(title,color="k",size = "20px")
         #pen = pg.mkPen(color=(graph_color),width=5)
-        self.plot(x,y,pen=pen1)
+        print(np.hstack(y[0,:]))
+        self.plot(x,np.hstack(y[0,:]),pen=pen1)
+        print(y)
+        if len(y)>1:
+            self.plot(x,y[1,:],pen=pen2,name=ylabel(1))
+        
         
               
         styles = {'font-size':'22px'}
-        self.setLabel('left', ylabel, **styles)
+        self.setLabel('left', units, **styles)
         self.setLabel('bottom', "time (s)", **styles)   
         
 class TelemetryGraph2(PlotWidget):
@@ -151,13 +157,14 @@ class MainWindow(QMainWindow):
      
         
      
-        time = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
-        example_data = [1,2,3,5,5,7,7,8,9,9,10,10,10,9,7]
-        example2_data = [1,3,3,4,5,7,8,8,9,10,10,11,10,9,8]
+        time = (np.array([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]))
+        example_data = np.array([1,2,3,5,5,7,7,8,9,9,10,10,10,9,7])
+        example2_data= np.array([1,3,3,4,5,7,8,8,9,10,10,11,10,9,8])
+        print(example_data)
         
         
         #define all needed graphs with placeholder data
-        alt_graph = TelemetryGraph2("Altitude",time,example_data, "Barometer", example2_data,"GPS","m")
+        alt_graph = TelemetryGraph("Altitude",time,np.array([example_data],[example2_data]), np.array(["Barometer", "GPS"]),"m")
         main_layout_bottom.addWidget(alt_graph, 0, 0)
         pressure_baro_graph = TelemetryGraph("Pressure", time, example_data, "Pa")
         main_layout_bottom.addWidget(pressure_baro_graph,1,0)
@@ -181,18 +188,25 @@ class MainWindow(QMainWindow):
         self.setGeometry(0,40,1950,950)
 
 
-# Create an application instance
-app = QApplication(sys.argv)
-#window.setGeometry(100, 100, 400, 200)
-
-# Create a label
-#label = QLabel("Altitude", main)
-#label.move(150, 80)
 
 
-main = MainWindow()
-# Show the main window
-main.show()
+def main():
+    # Create an application instance
+    app = QApplication(sys.argv)
+    #window.setGeometry(100, 100, 400, 200)
+    
+    # Create a label
+    #label = QLabel("Altitude", main)
+    #label.move(150, 80)
+    
+    
+    main = MainWindow()
+    # Show the main window
+    main.show()
+    
+    # Start the application event loop
+    app.exec()    
 
-# Start the application event loop
-app.exec()
+
+if __name__ == "__main__":
+    main()
