@@ -27,11 +27,21 @@ def main():
     
     csv_helper = CSVHandler()
 
-    packet = pd.read_csv('telemetry_packet_example.csv')
+
+
+
+    packet = pd.read_csv('telemetry_packet_example.csv',header=None,squeeze=True)
+   
     csv_helper.appendCSV(packet)
     csv_helper.appendCSV(packet)
     
-    print(csv_helper.getCurrData())
+   
+    
+    
+    #print(csv_helper.getCurrData())
+    
+    
+    csv_helper.saveCSV()
     
 
 

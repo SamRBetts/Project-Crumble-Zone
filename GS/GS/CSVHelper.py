@@ -41,53 +41,45 @@ class CSVHandler():
         - alt_GPS_data = GPS alt
         - GPS_sats_data = Sat tracked
     Methods:
-        createCSV(): creates a .csv for judging from telemetry data with appropriate
-        header and format, and shall save to a thumb drive for judges
-        saveCSV(): could be with create idk
+        saveCSV(): save all data from the telemetry packets to the python repository as .csv
+        appendCSV: add new packet data to current telemetry data data frame
+        getCurrData(): returns current data frame wit hall telemetry data
+        
+        ~~~Yet to be implemented~~~
         openCSV(): opens file explorer to chose a csv file to splice
         spliceCSV(): returns array of values in the rows of the file ignoring columns
             preceded by # and as many arrays as there are columns
         getSimPressure(): uses openCSV and splice CSV to open csv and return an 
             of pressure values
     """
-    file_name = "Flight_2033"
-    file_headers = 'telemetry_headers.csv'
-    data_headers = pd.read_csv(file_headers)
+   
    
     def __init__(self):
         
         
-        """
-        TODO: write code lol 
-            Is is a stupid idea to have a data object whose attributes are the telemetry 
-        data required? ??
-        
-        """
-        
-           
-        self.file_name = "Flight_2033"
-        self.file_headers = 'telemetry_headers.csv'
-        self.data_headers = pd.read_csv(self.file_headers)
-        self.telemetry_data = None
-        
+        self.file_name = "Flight_2033.csv"
+        file_headers = 'telemetry_headers.csv'
+        #this here is a but scuffed, the headers have to be in the 2nd row 
+        self.telemetry_data = pd.DataFrame(None) #initialize telemetry data frame
+        self.df_headers= pd.read_csv(file_headers) #converts into a dataframe
+
                 
     def saveCSV(self):
         """
         saves the csv currently created from telemetry_data and data_headers 
 
         """
+        #creates a new data frame with the telemetry data and the headers       
+        merged_df = pd.DataFrame(self.telemetry_data.values, columns=self.df_headers.iloc[0]) 
+        merged_df.to_csv(self.file_name) #save merged data frame
         
-        file_data = pd.concat([self.telemetry_data,self.data_headers],axis=0)
-        file_data.to_csv(self.file_name,index=False)
         
         
     def appendCSV(self,telemetry_packet: str):
         
         #vertically concatonates the new packet to data already received
        
-        self.telemetry_data = pd.concat([self.telemetry_data, telemetry_packet], axis=0)
-       #this no worky :<
-        
+        self.telemetry_data = pd.concat([self.telemetry_data, telemetry_packet],ignore_index=True,axis=0)
     
 
     def getCurrData(self):
