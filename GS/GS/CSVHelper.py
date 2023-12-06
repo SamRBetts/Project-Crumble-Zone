@@ -27,19 +27,7 @@ class CSVHandler():
             satellites tracked.
     Attributes:
         (all python lists)
-        - alt_data = altitude
-        - pressure_data = air pressure
-        - temp_data = temperature
-        - voltage_data = battery voltage
-        - tilt_x_data = probe tilt x angle
-        - tilt_y_data = probe tilt y angle
-        - rot_z_data = probe rot z angle
-        - pitot_data = air speed
-        - CMD_echo = command echo
-        - lat_GPS_data = GPS lat
-        - long_GPS_data = GPS long
-        - alt_GPS_data = GPS alt
-        - GPS_sats_data = Sat tracked
+
     Methods:
         saveCSV(): save all data from the telemetry packets to the python repository as .csv
         appendCSV: add new packet data to current telemetry data data frame

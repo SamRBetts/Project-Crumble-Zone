@@ -39,7 +39,7 @@ class XBeeHandler():
         
         #decodes the data (utf-8)
         
-        #returns it as a csv
+        #returns it as a string!
         pass
     
     def sendData():
