@@ -11,8 +11,13 @@ TODO:
 """
 
 
+import pandas as pd 
+
+
+
 class CSVHandler():
-     """
+    
+    """
     CSVCreater: Handles all csv functions.
     
         
@@ -21,6 +26,7 @@ class CSVHandler():
             coordinates that include latitude, longitude, altitude and number of
             satellites tracked.
     Attributes:
+        (all python lists)
         - alt_data = altitude
         - pressure_data = air pressure
         - temp_data = temperature
@@ -44,10 +50,13 @@ class CSVHandler():
         getSimPressure(): uses openCSV and splice CSV to open csv and return an 
             of pressure values
     """
+    file_name = "Flight_2033"
+    file_headers = 'telemetry_headers.csv'
+    data_headers = pd.read_csv(file_headers)
+   
+    def __init__(self):
         
-    
-    def __init__(self, alt_data, pressure_data, temp_data):
-        file_name = "Flight_2033"
+        
         """
         TODO: write code lol 
             Is is a stupid idea to have a data object whose attributes are the telemetry 
@@ -55,11 +64,34 @@ class CSVHandler():
         
         """
         
-        pass
-    
+           
+        self.file_name = "Flight_2033"
+        self.file_headers = 'telemetry_headers.csv'
+        self.data_headers = pd.read_csv(self.file_headers)
+        self.telemetry_data = None
+        
+                
+    def saveCSV(self):
+        """
+        saves the csv currently created from telemetry_data and data_headers 
+
+        """
+        
+        file_data = pd.concat([self.telemetry_data,self.data_headers],axis=0)
+        file_data.to_csv(self.file_name,index=False)
+        
+        
+    def appendCSV(self,telemetry_packet: str):
+        
+        #vertically concatonates the new packet to data already received
+       
+        self.telemetry_data = pd.concat([self.telemetry_data, telemetry_packet], axis=0)
+       #this no worky :<
+        
     
 
-
+    def getCurrData(self):
+        return self.telemetry_data
 
 
 

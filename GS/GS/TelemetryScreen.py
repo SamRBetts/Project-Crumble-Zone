@@ -95,6 +95,27 @@ class MainWindow(QMainWindow):
     
     def __init__(self):
         super(MainWindow, self).__init__()
+        
+        mission_time = 
+        packet_count = 
+        mode = 
+        state = 
+        altitude = 
+        air_speed = 
+        HS_deployed = 
+        PC_deployed = 
+        temperature = 
+        voltage = 
+        pressure = 
+        GPS_time = 
+        GPS_alt = 
+        GPS_lat = 
+        GPS_long = 
+        GPS_sats = 
+        tilt_x = 
+        tilt_y =
+        rot_z = 
+        cmd_echo = 
 
         self.setWindowTitle("Telemetry Screen V0")
 

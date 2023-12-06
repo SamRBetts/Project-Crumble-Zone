@@ -19,6 +19,7 @@ TODO:
 
 """
 
+#import pandas as pd 
 
 
 class PacketHandler():
@@ -35,17 +36,26 @@ class PacketHandler():
     all necessary data
     """
     
+    
     def __init__(self):
         pass
-        
-
+    
     def splicePacket(packet:str):
+        """
+        Assume that the packets incoming all have
+        -no new lines
+        -21 values separated by commas 
+        -
+        """
+        
         """
         TODO: remove all the commas and return array with each data pint
         check that team_id is correct 
         does it make sense to use a dictionary here to assign a number to each
         telemetry point??? 21 data points
         """
+        
+        
         pass
     
     
