@@ -7,13 +7,13 @@ Date: Dec 6, 2023
 
 """
 TODO: 
+do some commmand checks to make sure works as should
+
 
 """
 
 from datetime import datetime
 
-on = "ON"
-off = "OFF"
 cmd = "CMD"
 TEAM_ID = "2033"
     
@@ -26,6 +26,12 @@ class CMDHelper():
     def __init__(self):
         pass
     
+    def cmdToggleTelemetry(self, toggle:str):
+        
+        
+        return f"{cmd},{TEAM_ID},CX,{toggle}"
+        
+           
     def cmdSetTime(self, mode:str):
         
         if mode == "GS":
@@ -38,11 +44,29 @@ class CMDHelper():
         
         return f"{cmd},{TEAM_ID},ST,{utc_time}"
 
-    def cmdToggleTelemetry(self, toggle:str):
-        
-        
-        return f"{cmd},{TEAM_ID},CX,{toggle}"
-        
-        
+   
+    def cmdSimMode(self, mode:str):
+        """
+        Mode: ENABLE, ACTIVATE, DISABLE
+        """
+        if mode == "ENABLE" or mode == "ACTIVATE" or mode == "DISABLE":
+            return f"{cmd},{TEAM_ID},SIM,{mode}"
+    
+    def cmdSimP(self, pressure):
+        """
+        input pressure value in Pa, XXXXXX, no dec
+        TODO: add a way to check to make sure in proper format
+        """
+        return f"{cmd},{TEAM_ID},SIMP,{pressure}"
+    
+    def cmdCalAlt(self):
+        return f"{cmd},{TEAM_ID},CAL"
+    
+    def cmdToggleAudioBcn(self,mode:str):
+        """
+         Mode is "ON" or "OFF"
+         TODO: add checkers to make sure this is correct
+        """
+        return f"{cmd},{TEAM_ID},BCN,{mode}"
         
         

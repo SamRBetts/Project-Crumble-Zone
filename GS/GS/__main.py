@@ -54,7 +54,7 @@ def main():
     """
     ch = CMDHelper()
     #print(ch.cmdSetTime("GPS"))
-    print(ch.cmdToggleTelemetry("OFF"))
+    print(ch.cmdSimMode("FARTS"))
 
 
 

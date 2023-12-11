@@ -50,10 +50,8 @@ class PacketHandler():
         """
         
         """
-        TODO: remove all the commas and return array with each data pint
-        check that team_id is correct 
-        does it make sense to use a dictionary here to assign a number to each
-        telemetry point??? 21 data points
+        TODO: Some way to check and make sure packets are complete. Wait for Xbee
+        testing for common errors before implementing
         """
         
         #create a python list from comma separated values
@@ -65,14 +63,20 @@ class PacketHandler():
             print('\x1b[1;33;40m' + 'Warning: Team_ID does not match. Skipping packet...' + '\x1b[0m')
             packet_list=None
         
-        #return list object
+        #return list object where each item is a different telemetry point 
         return packet_list
     
     
-    def createPacket():
-       #omg there are so many things to add into this function :<<<<<
-        
-       pass
+    def createPacket(self, packet_list:list):
+       
+       #put all the points in the list into a string - making a packet
+       """
+       TODO: add an escape character or something to make it more packet-like
+       
+       """
+       packet_string = ','.join(packet_list)
+       
+       return packet_string
     
     
 
