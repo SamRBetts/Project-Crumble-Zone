@@ -19,6 +19,7 @@ TODO:
 
 """
 
+#import pandas as pd 
 
 
 class PacketHandler():
@@ -29,24 +30,43 @@ class PacketHandler():
     
     
     Methods:
-    - splicePacket(): takes .csv from Xbee and extracts every telemetry point 
-    from the recieved packet
+    - splicePacket(): takes string from Xbee and extracts every telemetry point 
+    from the recieved packet into a list object for TelemetryScreen
     - createPacket(): for testing only. Creates a correctly format packet given
     all necessary data
     """
     
+    
     def __init__(self):
         pass
+    
+    def splicePacket(self, packet:str):
+        """
+        Assume that the packets incoming all have
+        -no new lines
+        -21 values separated by commas 
         
-
-    def splicePacket(packet:str):
+        return a list object with all points in a different element
+        """
+        
         """
         TODO: remove all the commas and return array with each data pint
         check that team_id is correct 
         does it make sense to use a dictionary here to assign a number to each
         telemetry point??? 21 data points
         """
-        pass
+        
+        #create a python list from comma separated values
+        packet_list = packet.split(",")
+        
+        
+        #check Team_ID, make sure is 2033, break if not 
+        if packet_list[0] != "2033":
+            print('\x1b[1;33;40m' + 'Warning: Team_ID does not match. Skipping packet...' + '\x1b[0m')
+            packet_list=None
+        
+        #return list object
+        return packet_list
     
     
     def createPacket():

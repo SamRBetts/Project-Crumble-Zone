@@ -20,10 +20,12 @@ class XBeeHandler():
     
     
     Methods:
-    - __init__()
-    - getData(): returns a .csv with data ).)
-    - sendData(): sends a command with help from CMDHelper
+    - __init__(): creates object
+    - initializeXbee(): checks Xbee for Baud rate, connection, settings
+    - getData(): returns a .csv with data. 
+    - sendData(): sends a command with formatted command from CMDHelper
     - checkConnection()
+    - clearBuffer(): clears the buffer (data that hasn't been read yet)
     
     """
     
@@ -33,9 +35,19 @@ class XBeeHandler():
     
     
     def getData():
+        #is called when data is detected in the buffer
+        
+        #decodes the data (utf-8)
+        
+        #returns it as a string!
         pass
     
     def sendData():
+       #recives a csv to send
+       
+       #encodes the data (utf-8)
+       
+       #sends data over serial
         pass
         
         
