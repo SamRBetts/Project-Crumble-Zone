@@ -16,7 +16,16 @@ TODO: Launch Telemetry Screen from this application
 from PacketHelper import PacketHandler
 from CSVHelper import CSVHandler
 from CMDHelper import CMDHelper
+from XBeeHandler import XbeeHelper
+from TelemetryScreen import MainWindow
 import pandas as pd
+import time
+from serial import Serial
+import sys
+from PyQt5.QtWidgets import QApplication
+
+
+
 
 def main():
 
@@ -25,39 +34,92 @@ def main():
     """
     CLASS TESTING
     """
-    """
-    CSV HELPER TESTING
-    csv_helper = CSVHandler()
+    ch = CSVHandler()
 
-    packet = pd.read_csv('telemetry_packet_example.csv',header=None,squeeze=True)
+
+
+    # Create an application instance
+    app = QApplication(sys.argv)
+    #window.setGeometry(100, 100, 400, 200)
+    
+    # Create a label
+    #label = QLabel("Altitude", main)
+    #label.move(150, 80)
+    
+    
+    main = MainWindow()
+    # Show the main window
+    main.show()
+    
+    # Start the application event loop
+    app.exec() 
+    
+    
+    #packet = pd.read_csv('telemetry_packet_example.csv',header=None,squeeze=True)
    
-    csv_helper.appendCSV(packet)
-    csv_helper.appendCSV(packet)
+    #csv_helper.appendCSV(packet)
+    #csv_helper.appendCSV(packet)
     
    #print(csv_helper.getCurrData())
        
     #csv_helper.saveCSV()
-    """
+    
 
     """
     PACKET HANDLER TESTING
        
     """
-    """
+    
     ph = PacketHandler()
-    list_ex = ph.splicePacket('2033,data1,data2,data3,andmore')
-    print(list_ex)
-    """
+    #list_ex = ph.splicePacket('2033,data1,data2,data3,andmore')
+    #print(list_ex)
+    
     
     """
     CMDHELPER
-    """
+    
     ch = CMDHelper()
     #print(ch.cmdSetTime("GPS"))
     print(ch.cmdSimMode("FARTS"))
+    """
+    
+    
+    """
+    NOMINAL OPERATIONS
+    """
+    
+    #define used classes
+    
+    
+    """
+    packeth = PacketHandler()
+    cmdh = CMDHelper()
+    xbee = XbeeHelper("COM9") #initializes contact with Xbee on serial port
+    
+    
+    xbee.sendData("Here is a bunch of data")
+    
+    
+    if xbee.checkBuffer(): #if there is a start bit waiting in serial port...
+        incoming_packet = xbee.getData()
+        #print(incoming_packet)
+        data_list = packeth.splicePacket(incoming_packet) #splice packet to list type
+        #print(data_list)
+        cmdh.appendCSV(data_list) #add packet (as a list) to data in csvhelper
+        #print(cmdh.getCurrData())
+        #send data to telemetry screen to update
+        #update telemetry screen
+        main.update(data_list)
+    
+    """
+    
+    
+    
+    """
 
-
-
+    """
+    #cmdh.saveCSV() 
+    
 
     """
     NOMINAL OPERATIONS MODE
@@ -65,11 +127,13 @@ default mode
 1.Create blank telemetry screen (TelemetryScreen.py)
 2.Initialize connection with Xbee (XBeeHandler.py)
 3.Wait/Check for Xbee packet (XBeeHandler.py)
-3.Send the packet to Telemetry screen and CSV class
-4.Splice recieved packet (PacketHelper.py)
-5.Update screen (TelemetryScreen.py)
+    -event is triggered when the Xbee recieved a '<' value 
+4.Send the packet to Telemetry screen and CSV class
+5.Splice recieved packet (PacketHelper.py)
+6.Update screen (TelemetryScreen.py)
 Repeat 3-5 until Xbee disconnects or save .csv file is pressed (button on telemetry screen)
-6. Save .csv (CSVHelper) (DONE)
+7. Save .csv (CSVHelper) OR enter simulation mode 
+OR enter CMD mode based on button pressed OR exit
 
 SIMULATION MODE
 entered if simulation mode button on screen is pressed

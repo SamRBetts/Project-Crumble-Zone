@@ -62,7 +62,10 @@ class PacketHandler():
         if packet_list[0] != "2033":
             print('\x1b[1;33;40m' + 'Warning: Team_ID does not match. Skipping packet...' + '\x1b[0m')
             packet_list=None
-        
+        elif len(packet_list) != 21:
+            packet_list = None
+            print('\x1b[1;33;40m' + 'Warning: Packet incomplete. Skipping packet...' + '\x1b[0m')
+       
         #return list object where each item is a different telemetry point 
         return packet_list
     

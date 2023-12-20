@@ -183,8 +183,8 @@ class MainWindow(QMainWindow):
         widget.setLayout(main_layout)
         self.setCentralWidget(widget)
         self.setGeometry(0,40,1950,950)
-
-
+        
+        
 
 
 def main():

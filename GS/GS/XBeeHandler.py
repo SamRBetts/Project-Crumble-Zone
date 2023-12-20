@@ -16,7 +16,7 @@ like the whole thing
 
 from serial import Serial
 
-class XBeeHandler():
+class XbeeHelper():
     
     """
     XbeeHandler: interfaces with Xbee
@@ -34,12 +34,13 @@ class XBeeHandler():
     
     """
     
-    def __init__(self):
+    def __init__(self, port:str):
        #set-up communication with the Xbee for first-time startup
-       self.timeo = 5; #set number of seconds until connection times out
-       self.xbee = Serial("COM1",baudrate=9600,timeout=self.timeo)
-       print('\x1b[;30;42m' + 'Connection Establised with Xbee' + '\x1b[0m')
-       self.escape_bit="\n"
+       self.timeo = 1000; #set number of seconds until connection times out
+       self.xbee = Serial(port,baudrate=9600,timeout=self.timeo)
+       print('\x1b[;30;42m' + 'Connection Established with Xbee' + '\x1b[0m')
+       self.escape_bit=">".encode('utf-8')
+       self.start_bit="<".encode('utf-8')
        
 
     
@@ -49,18 +50,19 @@ class XBeeHandler():
         
         #decodes the data (utf-8)
         """
-        TODO: Decide on an escape bit, figure out the total size
+        TODO: figure out the total size
         
         """
-        packet = self.xbee.read_until(self.escape_bit,size=None,timeout=self.timeo)
-        #returns it as a string!
-        #self.xbee.close();  idk why this doesn't work
-        
+        #recieving garbage data don't care about
+        self.xbee.read_until(self.start_bit)
+        #now we actually have data, save it 
+        packet = self.xbee.read_until(self.escape_bit)
+       
         
         #close serial port! 
-        #__del__()
+        self.xbee.__del__()
         return packet.decode('utf-8')
-    
+        #return packet
     
     def sendData(self, packet:str):
        #recives a str to send
@@ -68,7 +70,17 @@ class XBeeHandler():
        #encodes the data (utf-8)
        self.xbee.flush() #wait until all data is written (probably a good idea idk)
        #sends data over serial
-        
+       
+    def checkBuffer(self):
+       buffer = self.xbee.in_waiting()
+       if(buffer >=1 and self.startbit in buffer): 
+           #check if there is a character in the buffer, and if there is, check for start bit           
+       
+            buffer = 0
+            return 1
+       else: 
+           buffer = 0
+           return 0 
         
         
     

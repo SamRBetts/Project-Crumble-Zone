@@ -66,8 +66,9 @@ class CSVHandler():
     def appendCSV(self,telemetry_packet: str):
         
         #vertically concatonates the new packet to data already received
-       
-        self.telemetry_data = pd.concat([self.telemetry_data, telemetry_packet],ignore_index=True,axis=0)
+        tp = pd.DataFrame(data = telemetry_packet)
+        tp= tp.transpose()
+        self.telemetry_data = pd.concat([self.telemetry_data, tp],ignore_index=True,axis=0)
     
 
     def getCurrData(self):

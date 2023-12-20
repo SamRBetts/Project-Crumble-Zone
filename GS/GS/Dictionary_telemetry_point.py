@@ -36,5 +36,5 @@ telemetry_points = {
     }
 
 """
-6-7 and 9-12 and 14-21 are special - they will be stored in arrays in the telemetry screen 
+1, 5-6 and 9-11 and 13-15 and 17-19 are special - they will be stored in arrays in the telemetry screen 
 """

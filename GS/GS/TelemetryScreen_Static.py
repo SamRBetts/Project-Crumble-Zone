@@ -44,11 +44,11 @@ class TelemetryGraph(PlotWidget):
     - update(): appends data to the y array and automatically updates based on 
         current mission time
     """
-    def __init__(self, title,ylabel, parent=None):
+    def __init__(self, title,x, ylabel, parent=None):
         super().__init__(parent)
         self.setBackground('w')
         self.setTitle(title,color="k",size = "20px")
-        self.x = []
+        self.x = x
         self.ylabel = ylabel
         #pen = pg.mkPen(color=(graph_color),width=5)
       #  print(np.hstack(y[0,:]))
@@ -60,23 +60,26 @@ class TelemetryGraph(PlotWidget):
         self.setLabel('left', ylabel, **styles)
         self.setLabel('bottom', "time (s)", **styles) 
     
-    def plotFirst(self,y1label):
+    def plotFirst(self,y1,y1label):
         #self.plot(self.x,y1,pen=WindowSettings.pen1,name=y1label)
-        self.y1 = []
-        self.data_line = self.plot(self.x, self.y1, pen=WindowSettings.pen1,name=y1label)
+        self.y1 = y1
+        self.data_line = self.plot(self.x, y1, pen=WindowSettings.pen1,name=y1label)
 
         
         
-    def plotSecond(self,y2label): 
+    def plotSecond(self,y2,y2label): 
        
-        self.y2= []
-        self.data_line2= self.plot(self.x,self.y2,pen=WindowSettings.pen2,name=y2label)
+        self.data_line2= self.plot(self.x,y2,pen=WindowSettings.pen2,name=y2label)
+        self.y2=y2
         self.doublePlot = 1 #flag saying there are 2 sets of data on plot 
         
-    def updatePlot(self, new_data):
+    def updatePlotFirst(self, new_data):
         
-        
-        #print(new_data)
+        """
+        TODO: write this fucntion!!!
+        """
+        #self.x = self.x[1:]  # Remove the first y element.
+        print(self.x)
         self.x.append(len(self.x)+1)  # Add a new value 1 higher than the last.
         
         self.y1.append(new_data[0])  
@@ -84,6 +87,8 @@ class TelemetryGraph(PlotWidget):
         if self.doublePlot:
             self.y2.append(new_data[1])
             self.data_line2.setData(self.x,self.y2)
+        #self.y = self.y[1:]  # Remove the first
+        #self.y.append(y)  # Add a new random value.
 
         self.data_line.setData(self.x, self.y1)  # Update the data.
         
@@ -228,61 +233,49 @@ class MainWindow(QMainWindow):
         time = ([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15])
         example_data = [1,2,3,5,5,7,7,8,9,9,10,10,10,9,7]
         example2_data= [1,3,3,4,5,7,8,8,9,10,10,11,10,9,8]
-        print(len(example_data)-1)
+        print(example_data)
         
        
         #define all needed graphs with placeholder data
         
-        alt_graph = TelemetryGraph("Altitude","m")
-        alt_graph.plotFirst("Barometer")
-        alt_graph.plotSecond("GPS")
+        alt_graph = TelemetryGraph("Altitude",time,"m")
+        alt_graph.plotFirst(example_data,"Barometer")
+        alt_graph.plotSecond(example2_data, "GPS")
         main_layout_bottom.addWidget(alt_graph, 0, 0)
         
-        #update plot to include test data! 
+        alt_graph.updatePlotFirst([example2_data,example_data])
         
-        for x in range(0,len(example_data)-1):
-        
-            alt_graph.updatePlot([example_data[x],example2_data[x]])
-            alt_graph.updatePlot([example_data[x],example2_data[x]])
-            print(x)
-        
-        
-        
-        pressure_baro_graph = TelemetryGraph("Pressure", "Pa")
-        pressure_baro_graph.plotFirst("Barometer")
-        pressure_baro_graph.plotSecond("GPS")
+        pressure_baro_graph = TelemetryGraph("Pressure", time, "Pa")
+        pressure_baro_graph.plotFirst(example_data, "Barometer")
+        pressure_baro_graph.plotSecond(example2_data, "GPS")
         main_layout_bottom.addWidget(pressure_baro_graph,1,0)
         
-        
-        
-        lat_GPS_graph = TelemetryGraph("Latitude", "deg")
-        lat_GPS_graph.plotFirst("Long")
-        lat_GPS_graph.plotSecond("Lat")
+        lat_GPS_graph = TelemetryGraph("Latitude",time, "deg")
+        lat_GPS_graph.plotFirst(example_data, "Long")
+        lat_GPS_graph.plotSecond(example2_data, "Lat")
         main_layout_bottom.addWidget(lat_GPS_graph, 2,0)
                 
-        speed_pitot_graph = TelemetryGraph("Air Speed","m/s")
-        speed_pitot_graph.plotFirst("Pitot Tube")
+        speed_pitot_graph = TelemetryGraph("Air Speed",time, "m/s")
+        speed_pitot_graph.plotFirst(example_data, "Pitot Tube")
         main_layout_bottom.addWidget(speed_pitot_graph, 0,1)
         
-        
-        tilt_graph = TelemetryGraph("Tilt","degrees")
-        tilt_graph.plotFirst("X")
-        tilt_graph.plotSecond("Y")
+        tilt_graph = TelemetryGraph("Tilt", time,"degrees")
+        tilt_graph.plotFirst(example_data,"X")
+        tilt_graph.plotSecond(example2_data,"Y")
         main_layout_bottom.addWidget(tilt_graph,1,1)
         
-        long_GPS_graph = TelemetryGraph("Z Rotation","rpm")
-        long_GPS_graph.plotFirst("MPU6050")
+        long_GPS_graph = TelemetryGraph("Z Rotation",time,"rpm")
+        long_GPS_graph.plotFirst(example_data,"MPU6050")
         main_layout_bottom.addWidget(long_GPS_graph, 2,1)
         
-        voltage_graph = TelemetryGraph("Voltage","V")
-        voltage_graph.plotFirst( "Voltage Sensor")
+        voltage_graph = TelemetryGraph("Voltage",time,"V")
+        voltage_graph.plotFirst(example_data, "Voltage Sensor")
         main_layout_bottom.addWidget(voltage_graph,0,2)
         
-        temp_graph = TelemetryGraph("Temperature", "deg F")
-        temp_graph.plotFirst("BMP0909")
+        temp_graph = TelemetryGraph("Temperature",time, "deg F")
+        temp_graph.plotFirst(example_data, "BMP0909")
         main_layout_bottom.addWidget(temp_graph,1,2)
         
-                
         """
         TODO: Finalize layout, add all commands, make button trigger cmd class
         make buttons for sim mode or other things idk find a good way to do it 
@@ -310,10 +303,6 @@ class MainWindow(QMainWindow):
     def updateData(self, incoming_packet):
         #call updates to all telemetry graphs and labels with a given incoming packet
         pass
-        #thought: use appends to add tthe indexed data to the list then call that plots with the new packet
-        
-        
-    
     """
     TODO write this class 
     """
