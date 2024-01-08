@@ -41,16 +41,14 @@ class XbeeHelper():
        print('\x1b[;30;42m' + 'Connection Established with Xbee' + '\x1b[0m')
        self.escape_bit=">".encode('utf-8')
        self.start_bit="<".encode('utf-8')
-       
-
-    
+          
     
     def getData(self):
         #is called when data is detected in the buffer
         
         #decodes the data (utf-8)
         """
-        TODO: figure out the total size
+        TODO: figure out the total size, make sure this removes the start/end bit
         
         """
         #recieving garbage data don't care about
@@ -61,8 +59,9 @@ class XbeeHelper():
         
         #close serial port! 
         self.xbee.__del__()
-        return packet.decode('utf-8')
-        #return packet
+        #return "<2033,0,1,2,3,5>"
+        #return packet.decode('utf-8')
+        return packet
     
     def sendData(self, packet:str):
        #recives a str to send
@@ -73,6 +72,7 @@ class XbeeHelper():
        
     def checkBuffer(self):
        buffer = self.xbee.in_waiting()
+       
        if(buffer >=1 and self.startbit in buffer): 
            #check if there is a character in the buffer, and if there is, check for start bit           
        
@@ -81,7 +81,7 @@ class XbeeHelper():
        else: 
            buffer = 0
            return 0 
-        
+               
         
     
     

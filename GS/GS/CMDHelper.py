@@ -31,19 +31,23 @@ class CMDHelper():
         
         return f"{cmd},{TEAM_ID},CX,{toggle}"
         
-           
+    
+    def getUTCTime(self):
+        utc_time= str(datetime.utcnow())
+        utc_time = utc_time[11:19]            
+        return utc_time
+        
     def cmdSetTime(self, mode:str):
         
         if mode == "GS":
-            utc_time= str(datetime.utcnow())
-            utc_time = utc_time[11:19]
+            utc_time= self.getUTCTime()
         elif mode == "GPS":
             utc_time = "GPS"
         else:
             utc_time = None
-        
+        #uncomment below to make work correct way
         return f"{cmd},{TEAM_ID},ST,{utc_time}"
-
+        #return f"{utc_time}"
    
     def cmdSimMode(self, mode:str):
         """

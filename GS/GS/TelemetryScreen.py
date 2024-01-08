@@ -9,12 +9,8 @@ Date: November 29, 2023
 
 """
 TODO: 
-- implement Telemetry Graph to plot more than one set of data
-- write update() method the TG 
-- implement parameters.py to change graph appearance externally
-- Test DisplayLabel()
 - Add way to pick and send commands (button+label)
--create .csv file button
+-create .csav file button
 -add simulation mode button
 
 """
@@ -23,14 +19,20 @@ TODO:
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QComboBox, QLabel, QGridLayout, QPushButton, QVBoxLayout, QWidget
 from PyQt5.QtGui import QColor, QPainter
-import pyqtgraph as pg
+from PyQt5.QtCore import QTimer,QDateTime
+#import pyqtgraph as pg
 from pyqtgraph import PlotWidget, plot
 import numpy as np
+import random
+#custom modules
 import WindowSettings
 import Dictionary_telemetry_point
+from PacketHelper import PacketHandler
+from CSVHelper import CSVHandler
+from CMDHelper import CMDHelper
+from XBeeHandler import XbeeHelper
 
 #inherit graphing widget to create custom graphing widget
-
 class TelemetryGraph(PlotWidget):
     """
     TelemetryGraph: inherit graphing widget to create custom graphing widget
@@ -48,11 +50,10 @@ class TelemetryGraph(PlotWidget):
         super().__init__(parent)
         self.setBackground('w')
         self.setTitle(title,color="k",size = "20px")
-        self.x = []
+        self.x = [0]
         self.ylabel = ylabel
-        #pen = pg.mkPen(color=(graph_color),width=5)
-      #  print(np.hstack(y[0,:]))
-        self.addLegend()
+        legend = self.addLegend()
+        #legend.setBrush('k') #- makes legend black, but looks really bad. 
         self.doublePlot = 0
         
               
@@ -62,21 +63,35 @@ class TelemetryGraph(PlotWidget):
     
     def plotFirst(self,y1label):
         #self.plot(self.x,y1,pen=WindowSettings.pen1,name=y1label)
-        self.y1 = []
+        self.y1 = [0]
         self.data_line = self.plot(self.x, self.y1, pen=WindowSettings.pen1,name=y1label)
 
         
         
     def plotSecond(self,y2label): 
        
-        self.y2= []
+        self.y2= [0]
         self.data_line2= self.plot(self.x,self.y2,pen=WindowSettings.pen2,name=y2label)
         self.doublePlot = 1 #flag saying there are 2 sets of data on plot 
         
     def updatePlot(self, new_data):
+        #where new data is a list type 
         
-        
+ 
         #print(new_data)
+        """
+        TODO: maybe make x the time value instead of packet number
+        remove 0 value - may need to make a clear list function when 0 altitude
+        is set with the button 
+        """
+        
+        #get rid of initialized 0 bc I don't know what I'm supposed to do
+        if self.x[0]==0:
+            self.x.pop(0)
+            self.y1.pop(0)
+            if self.doublePlot:
+                self.y2.pop(0)
+                
         self.x.append(len(self.x)+1)  # Add a new value 1 higher than the last.
         
         self.y1.append(new_data[0])  
@@ -87,7 +102,7 @@ class TelemetryGraph(PlotWidget):
 
         self.data_line.setData(self.x, self.y1)  # Update the data.
         
-        
+
         
         
 
@@ -127,6 +142,7 @@ class MainWindow(QMainWindow):
     
     """
     
+    #def __init__(self,xbee:XbeeHelper):
     def __init__(self):
         super(MainWindow, self).__init__()
         #initialize variables
@@ -134,28 +150,13 @@ class MainWindow(QMainWindow):
         #import the dictionary
         self.telemetry_points = Dictionary_telemetry_point.telemetry_points
         
-        #initialize lists of all telemetry to keep track of
-        self.mission_time = []
-        self.packet_count = []
-        self.mode = []
-        self.state = []
-        self.altitude =[] 
-        self.air_speed = []
-        #self.HS_deployed = []
-        #self.PC_deployed = []
-        self.temperature = []
-        self.voltage = []
-        self.pressure = []
-        self.GPS_time = []
-        self.GPS_alt = []
-        self.GPS_lat = []
-        self.GPS_long = []
-        #self.GPS_sats = []
-        self.tilt_x = []
-        self.tilt_y =[]
-        self.rot_z = []
-        # self.cmd_echo =[] 
+        #define classes needed
+        self.packet_handler = PacketHandler()
+        self.cmd_helper = CMDHelper()
+        self.timer = QTimer()
+        self.csv_handler = CSVHandler()
 
+        #self.xbee = xbee #initializes contact with Xbee on serial po
 
         self.setWindowTitle("Telemetry Screen V1")
 
@@ -183,33 +184,33 @@ class MainWindow(QMainWindow):
                
         
         #Define all data display labels
-        mis_time_lbl = DisplayLabel("hh:mm:ss",1)
-        parameter_layout1_b.addWidget(mis_time_lbl)
+        self.mis_time_lbl = DisplayLabel("hh:mm:ss",1)
+        parameter_layout1_b.addWidget(self.mis_time_lbl)
         
-        GPS_time_lbl = DisplayLabel("GPS hh:mm:ss UTC",1)
-        parameter_layout1_b.addWidget(GPS_time_lbl)
+        self.GPS_time_lbl = DisplayLabel("GPS hh:mm:ss UTC",1)
+        parameter_layout1_b.addWidget(self.GPS_time_lbl)
 
-        pkt_rx_lbl = DisplayLabel("XX",1)
-        parameter_layout1_b.addWidget(pkt_rx_lbl)
+        self.packet_count = 0;
+        self.pkt_tx_lbl = DisplayLabel("XX",1)
+        parameter_layout1_b.addWidget(self.pkt_tx_lbl)
         
-        cmd_echo_lbl = DisplayLabel("LAST CMD GIVEN",1)
-        parameter_layout1_b.addWidget(cmd_echo_lbl)
+        self.cmd_echo_lbl = DisplayLabel("NONE",1)
+        parameter_layout1_b.addWidget(self.cmd_echo_lbl)
         
+        self.state_lbl = DisplayLabel("FLIGHT MODE",1)
+        parameter_layout2_b.addWidget(self.state_lbl)
         
-        state_lbl = DisplayLabel("FLIGHT MODE",1)
-        parameter_layout2_b.addWidget(state_lbl)
+        self.HS_dpl_lbl = DisplayLabel("YES",1)
+        parameter_layout2_b.addWidget(self.HS_dpl_lbl)
         
-        HS_dpl_lbl = DisplayLabel("YES",1)
-        parameter_layout2_b.addWidget(HS_dpl_lbl)
+        self.PC_dpl_lbl = DisplayLabel("N",1)
+        parameter_layout2_b.addWidget(self.PC_dpl_lbl)
         
-        PS_dpl_lbl = DisplayLabel("NO",1)
-        parameter_layout2_b.addWidget(PS_dpl_lbl)
+        self.GPS_sats_lbl = DisplayLabel("3",1)
+        parameter_layout2_b.addWidget(self.GPS_sats_lbl)
         
-        GPS_sats_lbl = DisplayLabel("3",1)
-        parameter_layout2_b.addWidget(GPS_sats_lbl)
-        
-        Mode_dpl_lbl = DisplayLabel("Mode",1)
-        parameter_layout2_b.addWidget(Mode_dpl_lbl)
+        self.mode_dpl_lbl = DisplayLabel("NONE",1)
+        parameter_layout2_b.addWidget(self.mode_dpl_lbl)
         
         #define all the data labels
         parameter_layout1.addWidget(DisplayLabel("Mission Time",0))
@@ -221,66 +222,43 @@ class MainWindow(QMainWindow):
         parameter_layout2.addWidget(DisplayLabel("PS Deployed",0))
         parameter_layout2.addWidget(DisplayLabel("GPS sats tracking",0))
         parameter_layout2.addWidget(DisplayLabel("Mode",0))
+
+        #Initialize all graphs as empty axes
         
-     
-        
-        #Example Data- will delete later 
-        time = ([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15])
-        example_data = [1,2,3,5,5,7,7,8,9,9,10,10,10,9,7]
-        example2_data= [1,3,3,4,5,7,8,8,9,10,10,11,10,9,8]
-        print(len(example_data)-1)
-        
-       
-        #define all needed graphs with placeholder data
-        
-        alt_graph = TelemetryGraph("Altitude","m")
-        alt_graph.plotFirst("Barometer")
-        alt_graph.plotSecond("GPS")
-        main_layout_bottom.addWidget(alt_graph, 0, 0)
-        
-        #update plot to include test data! 
-        
-        for x in range(0,len(example_data)-1):
-        
-            alt_graph.updatePlot([example_data[x],example2_data[x]])
-            alt_graph.updatePlot([example_data[x],example2_data[x]])
-            print(x)
-        
-        
-        
-        pressure_baro_graph = TelemetryGraph("Pressure", "Pa")
-        pressure_baro_graph.plotFirst("Barometer")
-        pressure_baro_graph.plotSecond("GPS")
-        main_layout_bottom.addWidget(pressure_baro_graph,1,0)
-        
-        
-        
-        lat_GPS_graph = TelemetryGraph("Latitude", "deg")
-        lat_GPS_graph.plotFirst("Long")
-        lat_GPS_graph.plotSecond("Lat")
-        main_layout_bottom.addWidget(lat_GPS_graph, 2,0)
+        self.alt_graph = TelemetryGraph("Altitude","m")
+        self.alt_graph.plotFirst("Barometer")
+        self.alt_graph.plotSecond("GPS")
+        main_layout_bottom.addWidget(self.alt_graph, 0, 0)
                 
-        speed_pitot_graph = TelemetryGraph("Air Speed","m/s")
-        speed_pitot_graph.plotFirst("Pitot Tube")
-        main_layout_bottom.addWidget(speed_pitot_graph, 0,1)
+        self.pressure_graph = TelemetryGraph("Pressure", "Pa")
+        self.pressure_graph.plotFirst("Barometer")
+        main_layout_bottom.addWidget(self.pressure_graph,1,0)
         
+        self.GPS_graph = TelemetryGraph("Coordinates", "deg")
+        self.GPS_graph.plotFirst("Long")
+        self.GPS_graph.plotSecond("Lat")
+        main_layout_bottom.addWidget(self.GPS_graph, 2,0)
+                
+        self.speed_pitot_graph = TelemetryGraph("Air Speed","m/s")
+        self.speed_pitot_graph.plotFirst("Pitot Tube")
+        main_layout_bottom.addWidget(self.speed_pitot_graph, 0,1)
         
-        tilt_graph = TelemetryGraph("Tilt","degrees")
-        tilt_graph.plotFirst("X")
-        tilt_graph.plotSecond("Y")
-        main_layout_bottom.addWidget(tilt_graph,1,1)
+        self.tilt_graph = TelemetryGraph("Tilt","degrees")
+        self.tilt_graph.plotFirst("X")
+        self.tilt_graph.plotSecond("Y")
+        main_layout_bottom.addWidget(self.tilt_graph,1,1)
         
-        long_GPS_graph = TelemetryGraph("Z Rotation","rpm")
-        long_GPS_graph.plotFirst("MPU6050")
-        main_layout_bottom.addWidget(long_GPS_graph, 2,1)
+        self.rot_graph = TelemetryGraph("Z Rotation","rpm")
+        self.rot_graph.plotFirst("MPU6050")
+        main_layout_bottom.addWidget(self.rot_graph, 2,1)
         
-        voltage_graph = TelemetryGraph("Voltage","V")
-        voltage_graph.plotFirst( "Voltage Sensor")
-        main_layout_bottom.addWidget(voltage_graph,0,2)
+        self.voltage_graph = TelemetryGraph("Voltage","V")
+        self.voltage_graph.plotFirst( "Voltage Sensor")
+        main_layout_bottom.addWidget(self.voltage_graph,0,2)
         
-        temp_graph = TelemetryGraph("Temperature", "deg F")
-        temp_graph.plotFirst("BMP0909")
-        main_layout_bottom.addWidget(temp_graph,1,2)
+        self.temp_graph = TelemetryGraph("Temperature", "deg F")
+        self.temp_graph.plotFirst("BMP0909")
+        main_layout_bottom.addWidget(self.temp_graph,1,2)
         
                 
         """
@@ -304,18 +282,140 @@ class MainWindow(QMainWindow):
         widget.setLayout(main_layout)
         self.setCentralWidget(widget)
         self.setGeometry(0,40,1950,950)
+        
+    
 
+        """
+        change interval if needed - in milliseconds, will prob. stay at 1 sec
+        """
+        self.timer.setInterval(1000)
 
+        #w.timer.timeout.connect(lambda: w.update_plot_data(time[packet_num],pressure_values[packet_num]))
+        self.timer.timeout.connect(self.checkSerial)
+         
+        
+       # self.timer.start()
+
+    def startTimer(self):
+        """
+        TODO: make the timer start when on a button call 
+        """
+        self.timer.start()
        
     def updateData(self, incoming_packet):
-        #call updates to all telemetry graphs and labels with a given incoming packet
-        pass
-        #thought: use appends to add tthe indexed data to the list then call that plots with the new packet
-        
-        
-    
-    """
-    TODO write this class 
-    """
+        """
+        call updates to all telemetry graphs and labels with a given incoming packet
+        accesses the index in the list (found using the dictionary), update each plot or label
+        """       
+        self.mis_time_lbl.setText(incoming_packet[self.telemetry_points['MISSION_TIME']])
+        self.GPS_time_lbl.setText(self.cmd_helper.getUTCTime())
+        self.pkt_tx_lbl.setText(incoming_packet[self.telemetry_points['PACKET_COUNT']])
+        self.mode_dpl_lbl.setText(incoming_packet[self.telemetry_points['MODE']])
+        self.state_lbl.setText(incoming_packet[self.telemetry_points['STATE']])
+        self.GPS_sats_lbl.setText(incoming_packet[self.telemetry_points['GPS_SATS']])
+        self.HS_dpl_lbl.setText(incoming_packet[self.telemetry_points['HS_DEPLOYED']])
+        self.PC_dpl_lbl.setText(incoming_packet[self.telemetry_points['PC_DEPLOYED']])
+  
+        alt = float(incoming_packet[self.telemetry_points['ALTITUDE']])
+        gps_alt = float(incoming_packet[self.telemetry_points['GPS_ALTITUDE']])
+        self.alt_graph.updatePlot([alt,gps_alt])        
 
-    
+        speed = float(incoming_packet[self.telemetry_points['AIR_SPEED']])
+        self.speed_pitot_graph.updatePlot([speed])
+        
+        temp = float(incoming_packet[self.telemetry_points['TEMPERATURE']])
+        self.temp_graph.updatePlot([temp])
+        
+        volt = float(incoming_packet[self.telemetry_points['VOLTAGE']])
+        self.voltage_graph.updatePlot([volt])
+        
+        pres = float(incoming_packet[self.telemetry_points['PRESSURE']])
+        self.pressure_graph.updatePlot([pres])
+        
+        lat = float(incoming_packet[self.telemetry_points['GPS_LATITUDE']])
+        long = float(incoming_packet[self.telemetry_points['GPS_LONGITUDE']])
+        self.GPS_graph.updatePlot([lat,long])
+        
+        x = float(incoming_packet[self.telemetry_points['TILT_X']])
+        y = float(incoming_packet[self.telemetry_points['TILT_Y']])
+        self.tilt_graph.updatePlot([x,y])
+        
+        z = float(incoming_packet[self.telemetry_points['ROT_Z']])
+        self.rot_graph.updatePlot([z])
+            
+    def checkSerial(self):
+        pass
+        """
+        This method checks the serial buffer using the Xbee class and is called
+        at every Qtimer interval
+        If Xbee sees start bit, then calls readData, then updateData
+        """
+                
+        print("checking serial")
+     
+        random.seed()
+        startbit =1
+        #startbit = random.randint(0,1)
+        #print(startbit)
+        
+        
+       #CODE IS TEMPORARY FOR TESTING
+        if startbit:
+            alt = random.randint(80,150)
+            gps_alt = random.randint(80,150)
+            utc_time = self.cmd_helper.getUTCTime()
+            self.packet_count += 1
+            air_speed = random.randint(0,10)
+            temp = random.randint(60,90)
+            volt = random.randint(600,800)/100
+            pres = random.randint(90,150)/10
+            gps_lat = random.randint(41000,41200)/1000
+            gps_long = random.randint(9000,11000)/1000
+            sats = random.randint(1,4)
+            x = random.randint(0,6900)/100
+            y = random.randint(0,9000)/100
+            z = random.randint(0,60)/10
+            incoming_packet = f"2033,{utc_time},{self.packet_count},S,ASCENT,{alt},{air_speed},N,N,{temp},{volt},{pres},05:14:20,{gps_alt},{gps_lat},{gps_long},{sats},{x},{y},{z},CXON"
+            self.readData(incoming_packet)
+        
+        
+        """
+        UNCOMMENT THIS WHEN TESTING WITH XBEE
+        if self.xbee.checkBuffer(): #if there is a start bit waiting in serial port...
+            incoming_packet = self.xbee.getData()
+            #print(incoming_packet)
+            self.readData(incoming_packet)
+       """     
+        
+            
+    def readData(self,incoming_packet:str):
+        """
+        Once the Xbee class says it has found a start bit, this method is called
+        this reads an entire packet using the xbee class and splices it for
+        the csv and telemetry classes. After splicing, updateData is called in telemetry screen
+        and the live plots are updated
+        """        
+        data_list = self.packet_handler.splicePacket(incoming_packet) #splice packet to list type
+        #print(data_list)
+        
+        self.csv_handler.appendCSV(data_list) #add packet (as a list) to data in csvhelper
+        #print(self.csv_handler.getCurrData())
+            
+        #send data to telemetry screen to update
+        #update telemetry screen
+        self.updateData(data_list)
+        
+        
+    def sendCommand(self):
+        """
+        Connected to the send command button. Reads the combo box and calls the CMD
+        class to create the selected command. Use Xbee class to send the data. 
+        
+        
+        """
+    def SimMode(self):
+        
+        """
+        This will probably be a class idk yet.
+        Handles selecting the csv file and sending the data with Xbee class 
+        """

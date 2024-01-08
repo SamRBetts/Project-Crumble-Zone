@@ -8,7 +8,7 @@ Date: November 29, 2023
 """
 
 """
-TODO: Launch Telemetry Screen from this application
+TODO: clean this up! event loop now in telemetry screen
 
 """
 
@@ -18,6 +18,7 @@ from CSVHelper import CSVHandler
 from CMDHelper import CMDHelper
 from XBeeHandler import XbeeHelper
 from TelemetryScreen import MainWindow
+
 import pandas as pd
 import time
 from serial import Serial
@@ -34,6 +35,7 @@ def main():
     """
     CLASS TESTING
     """
+    #xbee = XbeeHelper("COM9") #initializes contact with Xbee on serial port
     ch = CSVHandler()
 
 
@@ -47,12 +49,16 @@ def main():
     #label.move(150, 80)
     
     
+    #main = MainWindow(xbee)
     main = MainWindow()
     # Show the main window
+    main.startTimer()
     main.show()
     
     # Start the application event loop
     app.exec() 
+    
+    
     
     
     #packet = pd.read_csv('telemetry_packet_example.csv',header=None,squeeze=True)
@@ -70,7 +76,7 @@ def main():
        
     """
     
-    ph = PacketHandler()
+    #ph = PacketHandler()
     #list_ex = ph.splicePacket('2033,data1,data2,data3,andmore')
     #print(list_ex)
     
@@ -94,7 +100,6 @@ def main():
     """
     packeth = PacketHandler()
     cmdh = CMDHelper()
-    xbee = XbeeHelper("COM9") #initializes contact with Xbee on serial port
     
     
     xbee.sendData("Here is a bunch of data")
