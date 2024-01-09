@@ -17,7 +17,7 @@ TODO:
 
 
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QComboBox, QLabel, QGridLayout, QPushButton, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QApplication, QMainWindow, QComboBox, QLabel, QGridLayout, QHBoxLayout,QPushButton, QVBoxLayout, QWidget,QRadioButton
 from PyQt5.QtGui import QColor, QPainter
 from PyQt5.QtCore import QTimer,QDateTime
 #import pyqtgraph as pg
@@ -158,7 +158,7 @@ class MainWindow(QMainWindow):
 
         #self.xbee = xbee #initializes contact with Xbee on serial po
 
-        self.setWindowTitle("Telemetry Screen V1")
+        self.setWindowTitle("Telemetry Screen V2 Dynamic Random Data")
 
         #Create the layouts for organizing the screen
         main_layout_top = QGridLayout()
@@ -171,17 +171,32 @@ class MainWindow(QMainWindow):
         parameter_layout2 = QVBoxLayout()
         parameter_layout2_b = QVBoxLayout()
         
-        command_layout = QVBoxLayout()
-        main_layout_bottom.addLayout(command_layout,2,2)
+        #defining how command layout looks (bottom box in bottom grid)
+        command_layout = QGridLayout() #1x4 final, main layout of command sectiosn
+        startstop_layout = QHBoxLayout()
+        cmd_terminal_layout = QGridLayout() #only 1x2, but just to make it easy   
+        cmd_term_layout_a = QVBoxLayout()
+        cmd_term_layout_b = QVBoxLayout()
         
+        cmd_terminal_layout.addLayout(cmd_term_layout_a,0,0)
+        cmd_terminal_layout.addLayout(cmd_term_layout_b,0,1)
+
+        #need to vert layouts for each column
+        
+        command_layout.addLayout(startstop_layout,0,0)#add top bottom layout
+        command_layout.addLayout(cmd_terminal_layout,2,0)
+        
+        #add main layouts
         main_layout.addLayout(main_layout_top, 0,0)  
         main_layout.addLayout(main_layout_bottom, 1,0)
-        
+        #add parameter screen layouts
         main_layout_top.addLayout(parameter_layout1,0,0)
         main_layout_top.addLayout(parameter_layout1_b,0,1)
         main_layout_top.addLayout(parameter_layout2,0,2)
         main_layout_top.addLayout(parameter_layout2_b,0,3)
-               
+        #add cmd layouts 
+        main_layout_bottom.addLayout(command_layout,2,2)
+
         
         #Define all data display labels
         self.mis_time_lbl = DisplayLabel("hh:mm:ss",1)
@@ -265,19 +280,84 @@ class MainWindow(QMainWindow):
         TODO: Finalize layout, add all commands, make button trigger cmd class
         make buttons for sim mode or other things idk find a good way to do it 
         """
-        cmd_combobox = QComboBox()
-        cmd_combobox.addItems(['Turn telemetry on','Turn telemetry off','Set time GPS', 'Set time UTC', '',''])
-        command_layout.addWidget(cmd_combobox)
+        
+        start_button = QPushButton()
+        start_button.setText("START SCREEN")
+        startstop_layout.addWidget(start_button)
+        start_button.clicked.connect(self.startTimer)
+        
+        stop_button = QPushButton()
+        stop_button.setText("STOP SCREEN")
+        startstop_layout.addWidget(stop_button)
+        stop_button.clicked.connect(self.stopTimer)
+        
+        cmd_term_lbl = DisplayLabel("~~~~~~~~~~~~~~~COMMAND TERMINAL~~~~~~~~~~~~~~~",0) 
+        command_layout.addWidget(cmd_term_lbl,1,0)
+                
+        
+        #cmd_combobox = QComboBox()
+        #cmd_combobox.addItems(['Turn telemetry on','Turn telemetry off','Set time GPS', 'Set time UTC', '',''])
+        #command_layout.addWidget(cmd_combobox)
         
         
         #add send command button
         send_button = QPushButton()
         send_button.setText("SEND COMMAND")
-        command_layout.addWidget(send_button)
+        command_layout.addWidget(send_button,3,0)
         
+        #define the cmd radio buttons 
+        telem_on_rb = QRadioButton('CX - Telemetry ON', self)
+        telem_on_rb.toggled.connect(self.cmdSelected)
+        cmd_term_layout_a.addWidget(telem_on_rb)
         
+        telem_off_rb = QRadioButton('CX - Telemetry OFF', self)
+        telem_off_rb.toggled.connect(self.cmdSelected)
+        cmd_term_layout_a.addWidget(telem_off_rb)
         
+        st_gps_rb = QRadioButton('ST - Set to GPS time', self)
+        st_gps_rb.toggled.connect(self.cmdSelected)
+        cmd_term_layout_a.addWidget(st_gps_rb)
+        
+        st_utc_rb = QRadioButton('ST - Set to UTC time', self)
+        st_utc_rb.toggled.connect(self.cmdSelected)
+        cmd_term_layout_a.addWidget(st_utc_rb)
+
+        bcn_on_rb = QRadioButton('BCN - Audio Beacon ON', self)
+        bcn_on_rb.toggled.connect(self.cmdSelected)
+        cmd_term_layout_a.addWidget(bcn_on_rb)
+        
+        bcn_off_rb = QRadioButton('BCN - Audio Beacon OFF', self)
+        bcn_off_rb.toggled.connect(self.cmdSelected)
+        cmd_term_layout_a.addWidget(bcn_off_rb)
+        
+        pr_on_rb = QRadioButton('PR - Parachute Rentention ON', self)
+        pr_on_rb.toggled.connect(self.cmdSelected)
+        cmd_term_layout_b.addWidget(pr_on_rb)
+        
+        pr_off_rb = QRadioButton('PR - Parachute Rentention OFF', self)
+        pr_off_rb.toggled.connect(self.cmdSelected)
+        cmd_term_layout_b.addWidget(pr_off_rb)
     
+        cal_rb = QRadioButton('CAL - Set 0m Altitude', self)
+        cal_rb.toggled.connect(self.cmdSelected)
+        cmd_term_layout_b.addWidget(cal_rb)        
+        
+        sim_act_rb = QRadioButton('SIM - Simulation mode ACTIVATE', self)
+        sim_act_rb.toggled.connect(self.cmdSelected)
+        cmd_term_layout_b.addWidget(sim_act_rb) 
+        
+        sim_en_rb = QRadioButton('SIM - Simulation mode ENABLE', self)
+        sim_en_rb.toggled.connect(self.cmdSelected)
+        cmd_term_layout_b.addWidget(sim_en_rb)
+        
+        sim_dis_rb = QRadioButton('SIM - Simulation mode DISABLE', self)
+        sim_dis_rb.toggled.connect(self.cmdSelected)
+        cmd_term_layout_b.addWidget(sim_dis_rb)
+        
+        simp_rb = QRadioButton('SIMP - Send simulated altitude', self)
+        simp_rb.toggled.connect(self.cmdSelected)
+        cmd_term_layout_b.addWidget(simp_rb)
+        
         widget = QWidget()
         widget.setLayout(main_layout)
         self.setCentralWidget(widget)
@@ -295,12 +375,21 @@ class MainWindow(QMainWindow):
          
         
        # self.timer.start()
-
+    def cmdSelected(self):
+        rb = self.sender()
+        
+        if rb.isChecked():
+            current_cmd = rb #set the current command to the one checked
+    
     def startTimer(self):
-        """
-        TODO: make the timer start when on a button call 
-        """
         self.timer.start()
+        self.start_button.setEnabled(False)
+        self.stop_button.setEnabled(True)
+        
+    def stopTimer(self):
+        self.timer.stop()
+        self.stop_button.setEnabled(False)
+        self.start_button.setEnabled(True)
        
     def updateData(self, incoming_packet):
         """

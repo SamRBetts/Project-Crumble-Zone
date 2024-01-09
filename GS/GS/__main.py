@@ -52,7 +52,7 @@ def main():
     #main = MainWindow(xbee)
     main = MainWindow()
     # Show the main window
-    main.startTimer()
+    #main.startTimer()
     main.show()
     
     # Start the application event loop
