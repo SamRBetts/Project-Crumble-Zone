@@ -23,6 +23,7 @@ from PyQt5.QtCore import QTimer,QDateTime
 #import pyqtgraph as pg
 from pyqtgraph import PlotWidget, plot
 import numpy as np
+import time 
 import random
 #custom modules
 import WindowSettings
@@ -31,6 +32,9 @@ from PacketHelper import PacketHandler
 from CSVHelper import CSVHandler
 from CMDHelper import CMDHelper
 from XBeeHandler import XbeeHelper
+
+port = "COM9"
+
 
 #inherit graphing widget to create custom graphing widget
 class TelemetryGraph(PlotWidget):
@@ -155,8 +159,7 @@ class MainWindow(QMainWindow):
         self.cmd_helper = CMDHelper()
         self.timer = QTimer()
         self.csv_handler = CSVHandler()
-
-        #self.xbee = xbee #initializes contact with Xbee on serial po
+        self.xbee = XbeeHelper() #initializes contact with Xbee on serial po
 
         self.setWindowTitle("Telemetry Screen V2 Dynamic Random Data")
 
@@ -275,21 +278,17 @@ class MainWindow(QMainWindow):
         self.temp_graph.plotFirst("BMP0909")
         main_layout_bottom.addWidget(self.temp_graph,1,2)
         
-                
-        """
-        TODO: Finalize layout, add all commands, make button trigger cmd class
-        make buttons for sim mode or other things idk find a good way to do it 
-        """
         
-        start_button = QPushButton()
-        start_button.setText("START SCREEN")
-        startstop_layout.addWidget(start_button)
-        start_button.clicked.connect(self.startTimer)
+        self.start_button = QPushButton()
+        self.start_button.setText("START SCREEN")
+        startstop_layout.addWidget(self.start_button)
+        self.start_button.clicked.connect(self.startTimer)
         
-        stop_button = QPushButton()
-        stop_button.setText("STOP SCREEN")
-        startstop_layout.addWidget(stop_button)
-        stop_button.clicked.connect(self.stopTimer)
+        
+        self.stop_button = QPushButton()
+        self.stop_button.setText("STOP SCREEN")
+        startstop_layout.addWidget(self.stop_button)
+        self.stop_button.clicked.connect(self.stopTimer)
         
         cmd_term_lbl = DisplayLabel("~~~~~~~~~~~~~~~COMMAND TERMINAL~~~~~~~~~~~~~~~",0) 
         command_layout.addWidget(cmd_term_lbl,1,0)
@@ -368,10 +367,9 @@ class MainWindow(QMainWindow):
         """
         change interval if needed - in milliseconds, will prob. stay at 1 sec
         """
-        self.timer.setInterval(1000)
+        
+        
 
-        #w.timer.timeout.connect(lambda: w.update_plot_data(time[packet_num],pressure_values[packet_num]))
-        self.timer.timeout.connect(self.checkSerial)
          
         
        # self.timer.start()
@@ -382,14 +380,38 @@ class MainWindow(QMainWindow):
             current_cmd = rb #set the current command to the one checked
     
     def startTimer(self):
+        #'''
+        if self.xbee.checkPort():
+            pass
+        else:
+            self.xbee.connect(port)
+        #'''
+        #self.xbee.connect(port)
+        #time.sleep(1)
+                
+        self.timer.setInterval(1000)
         self.timer.start()
+        self.timer.timeout.connect(self.checkSerial)
         self.start_button.setEnabled(False)
         self.stop_button.setEnabled(True)
         
     def stopTimer(self):
         self.timer.stop()
+        
+        """
+        TODO: create save csv button or make it so it doesn't save when stop button
+        or saves something         
+        """
+        
+        if self.csv_handler.getCurrData().empty:
+            print("CSV file is empty, skipping save")
+        else:  
+            self.csv_handler.saveCSV()
+            print("saved csv")
+            
         self.stop_button.setEnabled(False)
         self.start_button.setEnabled(True)
+        
        
     def updateData(self, incoming_packet):
         """
@@ -397,7 +419,8 @@ class MainWindow(QMainWindow):
         accesses the index in the list (found using the dictionary), update each plot or label
         """       
         self.mis_time_lbl.setText(incoming_packet[self.telemetry_points['MISSION_TIME']])
-        self.GPS_time_lbl.setText(self.cmd_helper.getUTCTime())
+        self.GPS_time_lbl.setText(incoming_packet[self.telemetry_points['MISSION_TIME']])
+        #self.GPS_time_lbl.setText(self.cmd_helper.getUTCTime())
         self.pkt_tx_lbl.setText(incoming_packet[self.telemetry_points['PACKET_COUNT']])
         self.mode_dpl_lbl.setText(incoming_packet[self.telemetry_points['MODE']])
         self.state_lbl.setText(incoming_packet[self.telemetry_points['STATE']])
@@ -433,50 +456,24 @@ class MainWindow(QMainWindow):
         self.rot_graph.updatePlot([z])
             
     def checkSerial(self):
-        pass
         """
         This method checks the serial buffer using the Xbee class and is called
         at every Qtimer interval
         If Xbee sees start bit, then calls readData, then updateData
         """
                 
-        print("checking serial")
+        print("checking serial: ")
      
-        random.seed()
-        startbit =1
-        #startbit = random.randint(0,1)
-        #print(startbit)
-        
-        
-       #CODE IS TEMPORARY FOR TESTING
-        if startbit:
-            alt = random.randint(80,150)
-            gps_alt = random.randint(80,150)
-            utc_time = self.cmd_helper.getUTCTime()
-            self.packet_count += 1
-            air_speed = random.randint(0,10)
-            temp = random.randint(60,90)
-            volt = random.randint(600,800)/100
-            pres = random.randint(90,150)/10
-            gps_lat = random.randint(41000,41200)/1000
-            gps_long = random.randint(9000,11000)/1000
-            sats = random.randint(1,4)
-            x = random.randint(0,6900)/100
-            y = random.randint(0,9000)/100
-            z = random.randint(0,60)/10
-            incoming_packet = f"2033,{utc_time},{self.packet_count},S,ASCENT,{alt},{air_speed},N,N,{temp},{volt},{pres},05:14:20,{gps_alt},{gps_lat},{gps_long},{sats},{x},{y},{z},CXON"
-            self.readData(incoming_packet)
-        
-        
-        """
-        UNCOMMENT THIS WHEN TESTING WITH XBEE
-        if self.xbee.checkBuffer(): #if there is a start bit waiting in serial port...
+        if self.xbee.checkBuffer()>0: #if there is a start bit waiting in serial port...
+            print("Start bit found")    
             incoming_packet = self.xbee.getData()
             #print(incoming_packet)
             self.readData(incoming_packet)
-       """     
         
-            
+        else:
+            print("No start bit found")
+           
+                   
     def readData(self,incoming_packet:str):
         """
         Once the Xbee class says it has found a start bit, this method is called
@@ -487,12 +484,15 @@ class MainWindow(QMainWindow):
         data_list = self.packet_handler.splicePacket(incoming_packet) #splice packet to list type
         #print(data_list)
         
-        self.csv_handler.appendCSV(data_list) #add packet (as a list) to data in csvhelper
-        #print(self.csv_handler.getCurrData())
+        if data_list is None:
+            pass
+        else:
+            self.csv_handler.appendCSV(data_list) #add packet (as a list) to data in csvhelper
+            #print(self.csv_handler.getCurrData())
             
-        #send data to telemetry screen to update
-        #update telemetry screen
-        self.updateData(data_list)
+            #send data to telemetry screen to update
+            #update telemetry screen
+            self.updateData(data_list)
         
         
     def sendCommand(self):

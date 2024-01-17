@@ -15,6 +15,8 @@ like the whole thing
 """
 
 from serial import Serial
+import time 
+
 
 class XbeeHelper():
     
@@ -34,33 +36,45 @@ class XbeeHelper():
     
     """
     
-    def __init__(self, port:str):
+    def __init__(self):
        #set-up communication with the Xbee for first-time startup
-       self.timeo = 1000; #set number of seconds until connection times out
-       self.xbee = Serial(port,baudrate=9600,timeout=self.timeo)
-       print('\x1b[;30;42m' + 'Connection Established with Xbee' + '\x1b[0m')
+       self.timeo = 5; #set number of seconds until connection times out
+       
        self.escape_bit=">".encode('utf-8')
        self.start_bit="<".encode('utf-8')
-          
+       self.xbee = Serial()
+    def connect(self, port:str):
+        self.xbee = Serial(port,baudrate=9600,timeout=self.timeo)
+        #self.xbee.open() maybe need this -- update: don't 
+        print('\x1b[;30;42m' + 'Connection Established with Xbee' + '\x1b[0m')
     
+    def disconnect(self):
+        self.xbee.close()
+        
     def getData(self):
         #is called when data is detected in the buffer
         
         #decodes the data (utf-8)
+        
+        
         """
         TODO: figure out the total size, make sure this removes the start/end bit
         
+        .read number of bytes,save that, then look at startbit
+        struct - turn data streams into byte vice verse
+        
         """
+    
         #recieving garbage data don't care about
-        self.xbee.read_until(self.start_bit)
+        #self.xbee.read_until(self.start_bit)
         #now we actually have data, save it 
-        packet = self.xbee.read_until(self.escape_bit)
+        packet = self.xbee.read_until(self.escape_bit).decode('utf-8')
        
         
-        #close serial port! 
-        self.xbee.__del__()
+        
         #return "<2033,0,1,2,3,5>"
         #return packet.decode('utf-8')
+        packet = packet[:-1]
         return packet
     
     def sendData(self, packet:str):
@@ -71,18 +85,40 @@ class XbeeHelper():
        #sends data over serial
        
     def checkBuffer(self):
-       buffer = self.xbee.in_waiting()
+    
+       buffer = self.xbee.read_until(self.start_bit)
+       #buffer = self.xbee.read(1).decode('utf-8')
+       #time.sleep(3)
+       #put buffer into list to look through
+     
+       buffer_list = [str(x) for a,x in enumerate(str(buffer))] 
+       #print(buffer_list)
+       #self.xbee.reset_input_buffer()
+       #print('<' in buffer_list)
        
-       if(buffer >=1 and self.startbit in buffer): 
-           #check if there is a character in the buffer, and if there is, check for start bit           
-       
+       #check if there is a character in the buffer, and if there is, 
+       #check for start bit           
+       #if(buffer >= 1 and self.start_bit in buffer_list): 
+       if(len(buffer_list) >= 1 and '<' in buffer_list):
             buffer = 0
             return 1
        else: 
            buffer = 0
            return 0 
-               
+       
+        #experiement with reset_input_buffer() if this doesn't work :>
+       
         
+    def printBuffer(self):
+        print(self.xbee.in_waiting)               
+        
+    def readLine(self):
+        print(self.xbee.read_until('>'.encode('utf-8'),600))
+        
+    def checkPort(self):
+        #return true is open
+        
+        return self.xbee.is_open
     
     
     
