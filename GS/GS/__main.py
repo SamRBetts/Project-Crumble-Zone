@@ -53,11 +53,18 @@ def main():
     main = MainWindow()
     # Show the main window
     #main.startTimer()
+    
+    
+    
     main.show()
     
     # Start the application event loop
     app.exec() 
     
+    
+    #after done executing: 
+    main.xbee.disconnect()
+    main.stopTimer()
     
     
     
