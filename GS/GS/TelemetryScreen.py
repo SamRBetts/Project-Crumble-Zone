@@ -300,9 +300,12 @@ class MainWindow(QMainWindow):
         
         
         #add send command button
-        send_button = QPushButton()
-        send_button.setText("SEND COMMAND")
-        command_layout.addWidget(send_button,3,0)
+        self.send_button = QPushButton()
+        self.send_button.setText("SEND COMMAND")
+        command_layout.addWidget(self.send_button,3,0)
+        self.send_button.clicked.connect(self.sendCommand)
+        self.send_button.setEnabled(False)
+
         
         #define the cmd radio buttons 
         telem_on_rb = QRadioButton('CX - Telemetry ON', self)
@@ -313,11 +316,11 @@ class MainWindow(QMainWindow):
         telem_off_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_a.addWidget(telem_off_rb)
         
-        st_gps_rb = QRadioButton('ST - Set to GPS time', self)
+        st_gps_rb = QRadioButton('ST - Set time to GPS', self)
         st_gps_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_a.addWidget(st_gps_rb)
         
-        st_utc_rb = QRadioButton('ST - Set to UTC time', self)
+        st_utc_rb = QRadioButton('ST - Set time to GS', self)
         st_utc_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_a.addWidget(st_utc_rb)
 
@@ -337,7 +340,7 @@ class MainWindow(QMainWindow):
         pr_off_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_b.addWidget(pr_off_rb)
     
-        cal_rb = QRadioButton('CAL - Set 0m Altitude', self)
+        cal_rb = QRadioButton('CAL - Set 0m altitude', self)
         cal_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_b.addWidget(cal_rb)        
         
@@ -357,28 +360,22 @@ class MainWindow(QMainWindow):
         simp_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_b.addWidget(simp_rb)
         
+        self.current_cmd = simp_rb #initialize as a random radio button for now
+        
         widget = QWidget()
         widget.setLayout(main_layout)
         self.setCentralWidget(widget)
         self.setGeometry(0,40,1950,950)
-        
-    
-
-        """
-        change interval if needed - in milliseconds, will prob. stay at 1 sec
-        """
-        
-        
-
-         
+                
         
        # self.timer.start()
     def cmdSelected(self):
         rb = self.sender()
         
         if rb.isChecked():
-            current_cmd = rb #set the current command to the one checked
-    
+            self.current_cmd = rb #set the current command to the radio button checked as an object
+            self.send_button.setEnabled(True)
+            
     def startTimer(self):
         #'''
         if self.xbee.checkPort():
@@ -499,9 +496,38 @@ class MainWindow(QMainWindow):
         """
         Connected to the send command button. Reads the combo box and calls the CMD
         class to create the selected command. Use Xbee class to send the data. 
-        
-        
         """
+        #now for a nightmare of if statemetns bc I don't know how else to do this T.T
+        cmd_array = self.current_cmd.text().split(" ") #take first part of string split
+        cmd_name = cmd_array[0] #option = self.current_cmd.text().
+        option = cmd_array[len(cmd_array)-1]
+        command = ""
+        
+        
+        if cmd_name == "CX":
+            command = self.cmd_helper.cmdToggleTelemetry(option)
+        elif cmd_name == "ST":
+            command = self.cmd_helper.cmdSetTime(option)
+        elif cmd_name == "BCN":
+            command = self.cmd_helper.cmdToggleAudioBcn(option)
+        elif cmd_name == "PR":
+            command = self.cmd_helper.cmdTogglePR(option)
+        elif cmd_name == "CAL":
+            command = self.cmd_helper.cmdCalAlt()
+        elif cmd_name == "SIM":
+            command = self.cmd_helper.cmdSimMode(option)
+        elif cmd_name == "SIMP":
+            command = self.cmd_helper.cmdSimP(option)
+            #this one needs changed to send pressure values every second, not correct right now
+            
+        print(command)
+        #send the command via the xbee serial! 
+        self.xbee.sendData(command)
+        
+        
+        
+        #self.cmd_helper.cmdToggleAudioBcn("ON")
+        
     def SimMode(self):
         
         """
