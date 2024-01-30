@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "Adafruit LIS3MDL + LSM6DSOX")(type "KiCad")(uri "$(KIPRJMOD)/Adafruit LIS3MDL + LSM6DSOX.pretty")(options "")(descr ""))
+)
