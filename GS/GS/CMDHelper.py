@@ -49,9 +49,13 @@ class CMDHelper():
         return f"{cmd},{TEAM_ID},ST,{utc_time}"
         #return f"{utc_time}"
    
+    def cmdTogglePR(self, mode:str):
+        return f"{cmd},{TEAM_ID},PR,{mode}"
+        
     def cmdSimMode(self, mode:str):
         """
         Mode: ENABLE, ACTIVATE, DISABLE
+        command ENABLE and ACTIVATE to enter simulation mode 
         """
         if mode == "ENABLE" or mode == "ACTIVATE" or mode == "DISABLE":
             return f"{cmd},{TEAM_ID},SIM,{mode}"
