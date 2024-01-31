@@ -8,7 +8,7 @@
 
     What is here was broken and repulsive to me. This message is a warning about jank.
 
-    The danger is in a particular assembly... it increases towards a center... the center of danger is here... of a particular file, and below this README.
+    The jank is in a particular assembly... it increases towards a center... the center of jank is here... of a particular file, and below this README.
 
     The jank is still present, in your time, as it was in ours.
 
