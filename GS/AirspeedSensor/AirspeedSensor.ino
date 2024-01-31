@@ -116,9 +116,10 @@ void loop() {
       break;
   }
 
-  deltaP = (float) (P_dat - MS4525ZeroCounts)/MS4525Span*MS4525FullScaleRange * 6894.7573; //kPa
+  deltaP = (float) (P_dat - MS4525ZeroCounts)/MS4525Span*MS4525FullScaleRange; // Pa
   float airspeed = sqrt(2*deltaP/1.2041); //1.2041 = air density
-  float temperature = (float) (T_dat*(150 - (-50)))/2047 - 50;
-  Serial.print("airspeed: ");
-  Serial.println(temperature);
+  //float temperature = (T_dat*(150 - (-50)))/2047 - 50;
+  Serial.println(deltaP);
+  Serial.println(airspeed);
+  delay(250);
 }
