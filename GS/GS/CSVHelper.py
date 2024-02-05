@@ -12,7 +12,7 @@ TODO:
 
 
 import pandas as pd 
-
+from PyQt5.QtWidgets import QFileDialog
 
 
 class CSVHandler():
@@ -73,10 +73,44 @@ class CSVHandler():
 
     def getCurrData(self):
         return self.telemetry_data
+    
+    
+    def openFile(self):
+        fname = QFileDialog.getOpenFileName(None, 'Open file','c:\\users/bettssr/documents/github/project-crumple-zone/GS/GS',"Text file (*.txt *.csv)")
 
+        file = open(fname[0])
+        text = file.read()
+        #print(text)
+        #return(text)
+        self.spliceSIMP(text)
 
+    def spliceSIMP(self,text):
+        """
+        Splices text of csv (type string) of pressure values and returns a list of pressure
+        values
+        """
+        lines = text.split('\n') #list object where each line is a different row
+        #num_rows = len(text.split('\n'))
+        #print(num_rows)
+        #print(lines)
+        self.pressure_vals = list()
+        
+        #iterate through each line looking for comments and pressure values
+        for line in lines: 
+            #check for empty lines and commments, ignore them
+            if len(line)>0 and line[0] != '#':
+                self.pressure_vals.append(line.split(',')[-1])   
+          
+        #print(pressure_vals)
+        self.SIMP_index = 0 
 
+    def getNextSIMP(self):
         
+        if self.SIMP_index == len(self.pressure_vals):
+            send = None
+        else:
+            send = self.presure_vals[self.SIMP_index]
+            self.SIMP_index += 1  
         
-        
+        return send 
         

@@ -134,6 +134,22 @@ class DisplayLabel(QLabel):
     
          super().paintEvent(event)
 
+class CommandRadioButton(QRadioButton):
+    """
+    custom radio button class - all command radio buttons are members
+    """
+    def __init__(self, text: str, parent=None):
+        super().__init__(text, parent)
+        self.setStyleSheet("font-size: 16px;")
+
+class Button(QPushButton):
+    """
+    custom button class - all command buttons are members
+    """
+    def __init__(self, text: str, parent=None):
+        super().__init__(text, parent)
+        self.setStyleSheet("font-size: 16px;")    
+
 
 #main window go brrrrrrr
 class MainWindow(QMainWindow):
@@ -161,7 +177,7 @@ class MainWindow(QMainWindow):
         self.csv_handler = CSVHandler()
         self.xbee = XbeeHelper() #initializes contact with Xbee on serial po
 
-        self.setWindowTitle("Telemetry Screen V2 Dynamic Random Data")
+        self.setWindowTitle("Telemetry Screen V2.5")
 
         #Create the layouts for organizing the screen
         main_layout_top = QGridLayout()
@@ -279,14 +295,12 @@ class MainWindow(QMainWindow):
         main_layout_bottom.addWidget(self.temp_graph,1,2)
         
         
-        self.start_button = QPushButton()
-        self.start_button.setText("START SCREEN")
+        self.start_button = Button("START SCREEN")
         startstop_layout.addWidget(self.start_button)
         self.start_button.clicked.connect(self.startTimer)
         
         
-        self.stop_button = QPushButton()
-        self.stop_button.setText("STOP SCREEN")
+        self.stop_button = Button("STOP SCREEN")
         startstop_layout.addWidget(self.stop_button)
         self.stop_button.clicked.connect(self.stopTimer)
         
@@ -300,67 +314,70 @@ class MainWindow(QMainWindow):
         
         
         #add send command button
-        self.send_button = QPushButton()
-        self.send_button.setText("SEND COMMAND")
+        self.send_button = Button("SEND COMMAND")
         command_layout.addWidget(self.send_button,3,0)
         self.send_button.clicked.connect(self.sendCommand)
         self.send_button.setEnabled(False)
 
         
         #define the cmd radio buttons 
-        telem_on_rb = QRadioButton('CX - Telemetry ON', self)
+        telem_on_rb = CommandRadioButton('CX - Telemetry ON', self)
         telem_on_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_a.addWidget(telem_on_rb)
         
-        telem_off_rb = QRadioButton('CX - Telemetry OFF', self)
+        telem_off_rb = CommandRadioButton('CX - Telemetry OFF', self)
         telem_off_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_a.addWidget(telem_off_rb)
         
-        st_gps_rb = QRadioButton('ST - Set time to GPS', self)
+        st_gps_rb = CommandRadioButton('ST - Set time to GPS', self)
         st_gps_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_a.addWidget(st_gps_rb)
         
-        st_utc_rb = QRadioButton('ST - Set time to GS', self)
+        st_utc_rb = CommandRadioButton('ST - Set time to GS', self)
         st_utc_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_a.addWidget(st_utc_rb)
 
-        bcn_on_rb = QRadioButton('BCN - Audio Beacon ON', self)
+        bcn_on_rb = CommandRadioButton('BCN - Audio Beacon ON', self)
         bcn_on_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_a.addWidget(bcn_on_rb)
         
-        bcn_off_rb = QRadioButton('BCN - Audio Beacon OFF', self)
+        bcn_off_rb = CommandRadioButton('BCN - Audio Beacon OFF', self)
         bcn_off_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_a.addWidget(bcn_off_rb)
         
-        pr_on_rb = QRadioButton('PR - Parachute Rentention ON', self)
+        pr_on_rb = CommandRadioButton('PR - Parachute Rentention ON', self)
         pr_on_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_b.addWidget(pr_on_rb)
         
-        pr_off_rb = QRadioButton('PR - Parachute Rentention OFF', self)
+        pr_off_rb = CommandRadioButton('PR - Parachute Rentention OFF', self)
         pr_off_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_b.addWidget(pr_off_rb)
     
-        cal_rb = QRadioButton('CAL - Set 0m altitude', self)
+        cal_rb = CommandRadioButton('CAL - Set 0m altitude', self)
         cal_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_b.addWidget(cal_rb)        
         
-        sim_act_rb = QRadioButton('SIM - Simulation mode ACTIVATE', self)
+        sim_act_rb = CommandRadioButton('SIM - Simulation mode ACTIVATE', self)
         sim_act_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_b.addWidget(sim_act_rb) 
         
-        sim_en_rb = QRadioButton('SIM - Simulation mode ENABLE', self)
+        sim_en_rb = CommandRadioButton('SIM - Simulation mode ENABLE', self)
         sim_en_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_b.addWidget(sim_en_rb)
         
-        sim_dis_rb = QRadioButton('SIM - Simulation mode DISABLE', self)
+        sim_dis_rb = CommandRadioButton('SIM - Simulation mode DISABLE', self)
         sim_dis_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_b.addWidget(sim_dis_rb)
         
-        simp_rb = QRadioButton('SIMP - Send simulated altitude', self)
+        simp_rb = CommandRadioButton('SIMP - Send simulated altitude', self)
         simp_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_b.addWidget(simp_rb)
         
         self.current_cmd = simp_rb #initialize as a random radio button for now
+        #boolean values to check for simulation mode
+        self.simmode_enabled = False
+        self.simmode_activated = False
+        self.simmode = False
         
         widget = QWidget()
         widget.setLayout(main_layout)
@@ -418,6 +435,7 @@ class MainWindow(QMainWindow):
         self.mis_time_lbl.setText(incoming_packet[self.telemetry_points['MISSION_TIME']])
         self.GPS_time_lbl.setText(incoming_packet[self.telemetry_points['MISSION_TIME']])
         #self.GPS_time_lbl.setText(self.cmd_helper.getUTCTime())
+        #TODO: change this to number of packets recieved, NOT SENT
         self.pkt_tx_lbl.setText(incoming_packet[self.telemetry_points['PACKET_COUNT']])
         self.mode_dpl_lbl.setText(incoming_packet[self.telemetry_points['MODE']])
         self.state_lbl.setText(incoming_packet[self.telemetry_points['STATE']])
@@ -469,7 +487,9 @@ class MainWindow(QMainWindow):
         
         else:
             print("No start bit found")
-           
+        
+        if self.simmode:
+            self.sendSIMP()
                    
     def readData(self,incoming_packet:str):
         """
@@ -503,7 +523,9 @@ class MainWindow(QMainWindow):
         option = cmd_array[len(cmd_array)-1]
         command = ""
         
+    
         
+        #get the total command string from CMDHelper class
         if cmd_name == "CX":
             command = self.cmd_helper.cmdToggleTelemetry(option)
         elif cmd_name == "ST":
@@ -516,21 +538,69 @@ class MainWindow(QMainWindow):
             command = self.cmd_helper.cmdCalAlt()
         elif cmd_name == "SIM":
             command = self.cmd_helper.cmdSimMode(option)
+            if option == "ENABLE":
+                self.simmode_enabled =True
+            elif option == "ACTIVATE":
+                self.simmode_activated = True
+            elif option == "DISABLE":
+                self.simmode_activated = False
+                self.simmode_enabled = False
         elif cmd_name == "SIMP":
-            command = self.cmd_helper.cmdSimP(option)
-            #this one needs changed to send pressure values every second, not correct right now
-            
+            if self.simmode_enabled and self.simmode_activated:
+                print("SIM MODE ACTIVATED")
+                self.SimMode()
+                #open file dialog
+                #TODO: if both boolean values are true, open up file dialog and automatically send pressured values. 
+                #maybe implemented a ARE YOU SURE??
+                
+                #this one needs changed to send pressure values every second, not correct right now
+            else:
+                print('\x1b[0;30;41m' + 'Warning: Simulation mode NOT ENABLED/ACTIVATED' + '\x1b[0m')
+
         print(command)
         #send the command via the xbee serial! 
-        self.xbee.sendData(command)
-        
-        
+        if self.xbee.checkPort():
+            self.xbee.sendData(command)
+        else:
+            #give an error message
+            print('\x1b[0;30;41m' + 'XBEE PORT NOT OPEN' + '\x1b[0m')
+
         
         #self.cmd_helper.cmdToggleAudioBcn("ON")
         
     def SimMode(self):
+             
         
         """
-        This will probably be a class idk yet.
-        Handles selecting the csv file and sending the data with Xbee class 
+        SIMULATION MODE
+       
+        1. Open up file explorer to choose .csv file (CSVHelper)
+        2. Splice .csv file into array of pressure values (CSVHelper)
+        2. Send SIM command to CanSat (CMDHelper, XBeeHandler)
+        3. Send Pressure values to CanSat (CMDHelper, XbeeHandler)
+        4. Continue execution loop in nominal operations
+        5. Continue until pressure values are depleted (CMDHelper)
         """
+        self.setWindowTitle("Telemetry Screen - SIMULATION MODE")
+        self.simmode = True
+        #get file from openFile 
+        file_text = self.csv_handler.openFile()
+        #print(type(file_text))
+        #list of pressure values and index stored in csv class 
+        #self.csv_handler.spliceSIMP(file_text)
+        self.startTimer()
+        
+    def sendSimP(self):
+        """
+        send next pressure value at this iteration of the loop
+        """
+        #use csv helper to get next value
+        pressure = self.csv_handler.getNextSIMP()
+        #get name of command to send to xbee
+        if pressure == None: #stop the timer if out of values 
+            self.stopTimer()
+        else: 
+            cmd = self.cmd_helper.cmdSimP(pressure)
+            #use xbee helper to send next value
+            self.xbee.sendData()
+        
