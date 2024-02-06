@@ -3,14 +3,14 @@
   
   tyler kessis                 
 */
-#include <SoftwareSerial.h>
 
 //Constants:
 //serial pind for xbee
 static const int RXPin = 7, TXPin = 8;
+#define xbeePort Serial2
 
 //Variables:
-SoftwareSerial ss(RXPin, TXPin);
+//SoftwareSerial ss(RXPin, TXPin);
 bool started= false;//True: Message is strated
 bool ended 	= false;//True: Message is finished 
 char incomingByte; //Variable to store the incoming byte
@@ -20,7 +20,7 @@ void setup() {
 
 	//Start the serial communication
 	Serial.begin(9600);
-  ss.begin(9600); //make sure this matches xbee baud
+  xbeePort.begin(9600); //make sure this matches xbee baud
 }
 
 void loop() {
@@ -30,16 +30,16 @@ void loop() {
   //send message to other xbee
   //String message = "hi\n";
 
-  //ss.print(message);
+  //xbeePortprint(message);
   //Serial.println(message);
 
   msg = "";  
   //read message from other xbee
-  while (ss.available()>0){
+  while (xbeePort.available()>0){
     //Serial.println("a");
   	//Read the incoming byte
-    incomingByte = ss.read();
-    //Serial.print(incomingByte);
+    incomingByte = xbeePort.read();
+    Serial.println(incomingByte);
     //Start the message when the '<' symbol is received
     if(incomingByte == '<')
     {
@@ -75,8 +75,8 @@ void loop() {
     started = false;
     ended = false;
   }
-
+  
   
 
-  delay(2000);
+  delay(1000);
 }

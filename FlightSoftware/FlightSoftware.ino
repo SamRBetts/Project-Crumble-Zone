@@ -1,88 +1,123 @@
 //Flight software code for Crumple Zone Cansat Team
 //by Tyler Kessis
 
-
-#include <Wire.h>
-#include <SPI.h>
-#include <Adafruit_Sensor.h>
-#include <Adafruit_BMP3XX.h>
-#include <Adafruit_LSM6DSOX.h>
-#include <TinyGPSPlus.h>
-#include <SoftwareSerial.h>
-#include <TimeLib.h>
-#include <SD.h>
+//include dependent libraries
+  #include <Adafruit_LSM6DSOX.h>
+  #include <Adafruit_LIS3MDL.h>
+  #include <Adafruit_Sensor.h>
+  #include <Adafruit_BMP3XX.h>
+  #include <SoftwareSerial.h>
+  #include <DFRobot_INA219.h>
+  #include <NMEAGPS.h>
+  #include <TimeLib.h>
+  #include <Servo.h>
+  #include <Wire.h>
+  #include <SPI.h>
+  #include <SD.h>
+  #include <Streamers.h>
+  #include <GPSport.h>
 
 //state variables
 
-bool isBeforeLaunch = true;
-bool isAscent = false;
-bool isFastDescent = false;
-bool isSlowDescent = false;
-bool isOnGround = false;
+  bool isBeforeLaunch = true;
+  bool isAscent = false;
+  bool isFastDescent = false;
+  bool isSlowDescent = false;
+  bool isOnGround = false;
 
+//payload telemetry transmission state
+bool isTelemetryTransmissionOn = false;
+
+//simulation states
 bool isSimEnabled = false;
 bool isSimActivated = false;
 
+//audio beacon state
 bool isBeaconActivated = false;
+
+//solenoid pins
+#define solPin 2
+
+//audio beacon pins
+#define buzPin 4
+
+//servo
+#define servoPin 6
+Servo servo;
+
+//wattmeter
+  DFRobot_INA219_IIC ina219(&Wire, INA219_I2C_ADDRESS4);
+  // Revise the following two paramters according to actula reading of the INA219 and the multimeter
+  // for linearly calibration
+  float ina219Reading_mA = 15;
+  float extMeterReading_mA = 15;
 
 //timer variable
 IntervalTimer timer;
 
+//gps
+  NMEAGPS  gps; // This parses the GPS characters
+  gps_fix  gfix; // This holds on to the latest values
+
+//gps / xbee hardware serial
+//#define gpsPort Serial1
+  #define xbeePort Serial2
+
 //packet variables
 
-// constant team id
-uint16_t const TEAM_ID = 2033; 
-// utc time
-String MISSION_TIME = String("00:00:00"); 
-/*increment everytime packet is transmitted since turned on
-  reset to 0 when installed on launch pad
-  maintain count during processor reset*/
-uint16_t PACKET_COUNT = 0;
-// 'F' for flight mode and 'S' for simulation mode 
-char MODE = 'F';
-//operating state of the software
-String STATE = String("HI I LIKE THIS STATE!");
-//altitude meters relative to ground level with resolution of 0.1m
-float ALTITUDE = 0.0;
-//ground altitude for altitude calibration (not in packet)
-float groundAltitude = 0.0;
-//air speed in meters per second with the pitot tube during ascent and descent
-float AIR_SPEED = 0.0;
-//'P' inicates the heat shield deployed, 'N' otherwise
-char HS_DEPLOYED = 'N';
-//'C' indicates the parachute deployed (at 100 m), ‘N’ otherwise.
-char PC_DEPLOYED = 'N'; 
-//temperature in degrees celcius with resolution of 0.1 degrees
-float TEMPERATURE = 0.0;
-//voltage from voltage regulator resolution of 0.1 V
-float VOLTAGE = 0.0;
-//air pressure from the bmp sensor in kPa, 0.1 resolution
-float PRESSURE = 0.0; 
-//time from gps receiver in UTC with resolution of seconds
-String GPS_TIME = String("00:00:00"); 
-//altitude from gps with resolution of 0.1 meters
-double GPS_ALTITUDE = 0.0;
-//latitude of GPS receiver in degrees with resolution of 0.0001 degree North
-double GPS_LATITUDE = 0.0000;
-//latitude of GPS receiver in degrees with resolution of 0.0001 degree West
-double GPS_LONGITUDE = 0.0000; 
-//number of satellites tracked by GPS reciever
-uint32_t GPS_SATS = 0;
-//X tilt angle of cansat in degrees with 0.01 resolution
-float TILT_X = 0.00;
-//Y tilt angle of cansat in degrees with 0.01 resolution
-float TILT_Y = 0.00;
-//rotation rate of cansat in degrees per second with 0.1 resolution
-float ROT_Z = 0.0;
-//text of last command received and processed by CanSat.
-String CMD_ECHO = String("ITSCOMMANDINTIME");
+  // constant team id
+  uint16_t const TEAM_ID = 2033; 
+  // utc time
+  String MISSION_TIME = String("00:00:00"); 
+  /*increment everytime packet is transmitted since turned on
+    reset to 0 when installed on launch pad
+    maintain count during processor reset*/
+  uint16_t PACKET_COUNT = 0;
+  // 'F' for flight mode and 'S' for simulation mode 
+  char MODE = 'F';
+  //operating state of the software
+  String STATE = String("HI I LIKE THIS STATE!");
+  //altitude meters relative to ground level with resolution of 0.1m
+  float ALTITUDE = 0.0;
+  //ground altitude for altitude calibration (not in packet)
+  float groundAltitude = 0.0;
+  //air speed in meters per second with the pitot tube during ascent and descent
+  float AIR_SPEED = 0.0;
+  //'P' inicates the heat shield deployed, 'N' otherwise
+  char HS_DEPLOYED = 'N';
+  //'C' indicates the parachute deployed (at 100 m), ‘N’ otherwise.
+  char PC_DEPLOYED = 'N'; 
+  //temperature in degrees celcius with resolution of 0.1 degrees
+  float TEMPERATURE = 0.0;
+  //voltage from voltage regulator resolution of 0.1 V
+  float VOLTAGE = 0.0;
+  //air pressure from the bmp sensor in kPa, 0.1 resolution
+  float PRESSURE = 0.0; 
+  //time from gps receiver in UTC with resolution of seconds
+  String GPS_TIME = String("00:00:00"); 
+  //altitude from gps with resolution of 0.1 meters
+  float GPS_ALTITUDE = 0.0;
+  //latitude of GPS receiver in degrees with resolution of 0.0001 degree North
+  float GPS_LATITUDE = 0.0000;
+  //latitude of GPS receiver in degrees with resolution of 0.0001 degree West
+  float GPS_LONGITUDE = 0.0000; 
+  //number of satellites tracked by GPS reciever
+  uint8_t GPS_SATS = 0;
+  //X tilt angle of cansat in degrees with 0.01 resolution
+  float TILT_X = 0.00;
+  //Y tilt angle of cansat in degrees with 0.01 resolution
+  float TILT_Y = 0.00;
+  //rotation rate of cansat in degrees per second with 0.1 resolution
+  float ROT_Z = 0.0;
+  //text of last command received and processed by CanSat.
+  String CMD_ECHO = String("ITSCOMMANDINTIME");
 
-//SoftWareSerial objects
-//put software serials as global variables.
-//doesn't work inside classes idk why
+//other variables for state machine
+  float accelZ;
+  float maxAltitude;
+  float rotX;
+  float rotY;
 
-SoftwareSerial ssGPS(0, 1); // rx and tx pins respectivley
-SoftwareSerial ssXBee(7, 8);
 
 //classes for each device improves code organization for large projects like this
 
@@ -94,7 +129,7 @@ class PressureSensor {
     #define BMP_MOSI 11
     #define BMP_CS 10
 
-    const uint16_t SEALEVELPRESSURE_HPA = 1013.25;
+    const float SEALEVELPRESSURE_HPA = 1013.25;
 
     Adafruit_BMP3XX bmp;
 
@@ -117,24 +152,7 @@ class PressureSensor {
     }
 };
 
-class GPSSensor {
-
-  #define GPSBaud 9600
-
-  public:
-
-    TinyGPSPlus tgps;
-
-    GPSSensor() {
-      
-    }
-
-    void begin() {
-      ssGPS.begin(GPSBaud);
-    }
-};
-
-class AccelerometerGyroscopeSensor {
+class AccelGyroMag {
 
 
   public:
@@ -145,26 +163,38 @@ class AccelerometerGyroscopeSensor {
     #define LSM_SCK 13
     #define LSM_MISO 12
     #define LSM_MOSI 11
+    
+    #define LIS3MDL_CLK 13
+    #define LIS3MDL_MISO 12
+    #define LIS3MDL_MOSI 11
+    #define LIS3MDL_CS 10
     Adafruit_LSM6DSOX sox;
+    Adafruit_LIS3MDL lis3mdl;
 
-    AccelerometerGyroscopeSensor() {
+    AccelGyroMag() {
       
     }
 
     void begin() {
       if (!sox.begin_I2C()) {
-        // if (!sox.begin_SPI(LSM_CS)) {
-        // if (!sox.begin_SPI(LSM_CS, LSM_SCK, LSM_MISO, LSM_MOSI)) {
-        // Serial.println("Failed to find LSM6DSOX chip");
-        while (1) {
-          delay(10);
-        }
+        Serial.println("Failed to find LSM6DSOX chip");
+        while (1) { delay(10); }
+      }
+
+      if (! lis3mdl.begin_I2C()) {          // hardware I2C mode, can pass in address & alt Wire
+        Serial.println("Failed to find LIS3MDL chip");
+        while (1) { delay(10); }
       }
 
       sox.setAccelRange(LSM6DS_ACCEL_RANGE_2_G);
       sox.setGyroRange(LSM6DS_GYRO_RANGE_250_DPS);
       sox.setAccelDataRate(LSM6DS_RATE_12_5_HZ);
       sox.setGyroDataRate(LSM6DS_RATE_12_5_HZ);
+
+      lis3mdl.setPerformanceMode(LIS3MDL_MEDIUMMODE);
+      lis3mdl.setOperationMode(LIS3MDL_CONTINUOUSMODE);
+      lis3mdl.setDataRate(LIS3MDL_DATARATE_155_HZ);
+      lis3mdl.setRange(LIS3MDL_RANGE_4_GAUSS);
     }
 };
 
@@ -204,12 +234,9 @@ class PitotTube {
     const int16_t MS4525ZeroCounts = (MS4525MinScaleCounts + MS4525FullScaleCounts) / 2;
     // Absolute, Gauge
     //const int16_t MS4525ZeroCounts=MS4525MinScaleCounts;
-    
-    //get pressure and temperature for density calculation
-    Adafruit_BMP3XX bmp;
 
-    PitotTube(Adafruit_BMP3XX bmp3) {
-      bmp = bmp3;
+    PitotTube() {
+      
     }
     
     byte fetch_pressure(uint16_t &P_dat, uint16_t &T_dat) {
@@ -242,7 +269,6 @@ class PitotTube {
       float deltaP;
 
       _status = fetch_pressure(P_dat, T_dat);
-      Serial.println(_status);
 
       switch (_status) {
         case 0:
@@ -262,9 +288,12 @@ class PitotTube {
       
 
       deltaP = (float) (P_dat - MS4525ZeroCounts)/MS4525Span*MS4525FullScaleRange; //kPa
+      if(deltaP < 0.0) {
+        deltaP = 0.0;
+      }
 
-      //287.05 = air gas constant (J/kg), 273.15 = convert to Kelvin
-      float rho = bmp.pressure/(287.05*(bmp.temperature + 273.15));
+      //0.28705 = air gas constant (kJ/kg), 273.15 = convert to Kelvin
+      float rho = PRESSURE/(0.28705*(TEMPERATURE + 273.15));
 
       float airspeed = sqrt(2*deltaP/rho);
 
@@ -290,20 +319,20 @@ class XBeeCommunication {
     }
 
     void begin() {
-      ssXBee.begin(XBeeBaud);
+      xbeePort.begin(XBeeBaud);
     }
 
     void sendPacket(String s) {
-      ssXBee.print(s);
+      xbeePort.print(s);
     }
 
-    void recieveInstructions() {
+    String recieveInstructions() {
       msg = "";
       //read message from other xbee
-      while (ssXBee.available() > 0) {
+      while (xbeePort.available() > 0) {
         //Serial.println("a");
         //Read the incoming byte
-        incomingByte = ssXBee.read();
+        incomingByte = xbeePort.read();
         //Serial.print(incomingByte);
         //Start the message when the '<' symbol is received
         if (incomingByte == '<') {
@@ -331,11 +360,13 @@ class XBeeCommunication {
       if (started && ended) {
         //Serial.println("e");
         //store / return message
-        Serial.println(msg);
-        msg = "";
+        //Serial.println(msg);
         started = false;
         ended = false;
+        return msg;
       }
+
+      return "N";
     }
 };
 
@@ -384,9 +415,7 @@ class Clock {
     }
     
     void begin() {
-      Serial.begin(9600);
-
-      setSyncProvider(Teensy3Clock.get());   // the function to get the time from the RTC
+      setSyncProvider(Teensy3Clock.get);   // the function to get the time from the RTC
       if(timeStatus()!= timeSet) {
         Serial.println("Unable to sync with the RTC");
       }
@@ -425,43 +454,85 @@ class Clock {
     }
 
     void clockSetTime(unsigned long t) {
-      Teensy3Clock.set(t); // set the RTC
+      Teensy3Clock.set(t);
       setTime(t);
     }
-
 };
 
 //class instance variables
 //compiler doesn't like these variables above the classes
 PressureSensor pres;
-GPSSensor gps;
-AccelerometerGyroscopeSensor accelGy;
-PitotTube pito(pres.bmp);
+AccelGyroMag accelGy;
+PitotTube pito;
 XBeeCommunication xbee;
 SDCard sd;
 Clock cl;
 
-
 void collectData() {
-  //tp.MISSION_TIME = "00:00:00" //get rtc working!
+
   //tp.PACKET_COUNT++;
+
   
+  pres.bmp.performReading();
   if(! isSimActivated) {
     ALTITUDE = pres.bmp.readAltitude(pres.SEALEVELPRESSURE_HPA) - groundAltitude;
-    PRESSURE = pres.bmp.readPressure() / 1000; // kPa
+    PRESSURE = pres.bmp.readPressure() / 1000.0; // kPa
   }
+
+  accelGy.lis3mdl.read();
+  sensors_event_t mag; 
+  accelGy.lis3mdl.getEvent(&mag);
+
+  TILT_X = atan2(-mag.magnetic.z,mag.magnetic.x)*RAD_TO_DEG-104;
+  TILT_Y = atan2(-mag.magnetic.z,mag.magnetic.y)*RAD_TO_DEG-104;
+
+  //i dont think this works but it was worth a try
+  //TILT_X =  mag.magnetic.roll
+  //TILT_Y = mag.magnetic.pitch;
+
+  sensors_event_t accel;
+  sensors_event_t gyro;
+  sensors_event_t temp;
+  accelGy.sox.getEvent(&accel, &gyro, &temp);
+  accelZ = accel.acceleration.z;
+  rotX = gyro.gyro.x;
+  rotY = gyro.gyro.y;
+  ROT_Z = gyro.gyro.z;
+
+  TEMPERATURE = (pres.bmp.readTemperature() + temp.temperature) / 2.0;
+
   AIR_SPEED = pito.getAirspeed();
-  TEMPERATURE = pres.bmp.readTemperature();
-  //VOLTAGE = 
-  GPS_TIME = String(gps.tgps.time.hour()) + String(":") + String(gps.tgps.time.minute()) + String(":") + String(gps.tgps.time.second());
-  GPS_ALTITUDE = gps.tgps.altitude.meters();
-  GPS_LATITUDE = gps.tgps.location.lat();
-  GPS_LONGITUDE = gps.tgps.location.lng();
-  GPS_SATS = gps.tgps.satellites.value();
-  TILT_X = accelGy.sox.gyroX;
-  TILT_Y = accelGy.sox.gyroY;
-  ROT_Z = accelGy.sox.gyroZ;
+
+  VOLTAGE = ina219.getBusVoltage_V();
+
+  while (gps.available( gpsPort )) {
+    gfix = gps.read();
+    //Serial.println("HI");
+
+
+    if(gfix.valid.time) {
+      uint8_t h = gfix.dateTime.hours;
+      uint8_t m = gfix.dateTime.minutes;
+      uint8_t s = gfix.dateTime.seconds;
+      GPS_TIME = (h < 10 ? "0" : "") + String(h) + ":" + (m < 10 ? "0" : "") + String(m) + ":" + (s < 10 ? "0" : "") + String(s);
+    } 
+
+    if(gfix.valid.location) {
+      GPS_LATITUDE = gfix.latitude();
+      GPS_LONGITUDE = gfix.longitude();
+    }
+
+    if(gfix.valid.altitude) {
+      GPS_ALTITUDE = gfix.altitude();
+    }
+    
+    if(gfix.valid.satellites) {
+      GPS_SATS = gfix.satellites;
+    }
+  }
   
+  //trace_all( DEBUG_PORT, gps, gfix );
+
   //tp.CMD_ECHO; 
 }
 
@@ -482,31 +553,101 @@ String buildStateString() {
 }
 
 String buildPacket() {
-  String packet = String("<");
-  packet = packet + String(TEAM_ID) + String(", ");
-  packet = packet + MISSION_TIME + String(", ");
-  packet = packet + String(PACKET_COUNT) + String(", ");
-  packet = packet + String(MODE) + String(", ");
-  packet = packet + buildStateString() + String(", ");
-  packet = packet + String(ALTITUDE) + String(", ");
-  packet = packet + String(AIR_SPEED) + String(", ");
-  packet = packet + String(HS_DEPLOYED) + String(", ");
-  packet = packet + String(PC_DEPLOYED) + String(", ");
-  packet = packet + String(TEMPERATURE) + String(", ");
-  packet = packet + String(VOLTAGE) + String(", ");
-  packet = packet + String(PRESSURE) + String(", ");
-  packet = packet + GPS_TIME + String(", ");
-  packet = packet + String(GPS_ALTITUDE) + String(", ");
-  packet = packet + String(GPS_LATITUDE) + String(", ");
-  packet = packet + String(GPS_LONGITUDE) + String(", ");
-  packet = packet + String(GPS_SATS) + String(", ");
-  packet = packet + String(TILT_X) + String(", ");
-  packet = packet + String(TILT_Y) + String(", ");
-  packet = packet + String(ROT_Z) + String(", ");
-  packet = packet + CMD_ECHO;
-  packet = packet + String(">");
+  return  String("<")
+        + String(TEAM_ID) + String(", ")
+        + MISSION_TIME + String(", ")
+        + String(PACKET_COUNT) + String(", ")
+        + String(MODE) + String(", ")
+        + buildStateString() + String(", ")
+        + String(ALTITUDE) + String(", ")
+        + String(AIR_SPEED) + String(", ")
+        + String(HS_DEPLOYED) + String(", ")
+        + String(PC_DEPLOYED) + String(", ")
+        + String(TEMPERATURE) + String(", ")
+        + String(VOLTAGE) + String(", ")
+        + String(PRESSURE) + String(", ")
+        + GPS_TIME + String(", ")
+        + String(GPS_ALTITUDE) + String(", ")
+        + String(GPS_LATITUDE) + String(", ")
+        + String(GPS_LONGITUDE) + String(", ")
+        + String(GPS_SATS) + String(", ")
+        + String(TILT_X) + String(", ")
+        + String(TILT_Y) + String(", ")
+        + String(ROT_Z) + String(", ")
+        + CMD_ECHO 
+        + String(">");
+}
 
-  return packet;
+void executeCommand(String cmd) {
+  
+  if(cmd.substring(9).equals("CX,ON")) {
+    Serial.println("HI");
+    isTelemetryTransmissionOn = true;
+  }
+  if(cmd.substring(9).equals("CX,OFF")) {
+    Serial.println("HI");
+    isTelemetryTransmissionOn = false;
+  }
+
+  //set clock
+  if(cmd.substring(0,12).equals("CMD,2033,ST,") && cmd.length() == 20) {
+    int h = cmd.substring(12,14).toInt();
+    int m = cmd.substring(15,17).toInt();
+    int s = cmd.substring(18,20).toInt();
+    unsigned long t = h*3600 + m*60 + s;
+    cl.clockSetTime(t);
+  }
+  
+  if(cmd.substring(12).equals("GPS")) {
+    int h = gfix.dateTime.hours;
+    int m = gfix.dateTime.minutes;
+    int s = gfix.dateTime.seconds;
+    unsigned long t = h*3600 + m*60 + s;
+    cl.clockSetTime(t);
+  }
+  
+  //enable, activate, disable simulation mode
+  if(cmd.substring(9).equals("SIM,ENABLE")) {
+    isSimEnabled = true;
+  }
+  if(cmd.substring(9).equals("SIM,ACTIVATE") && isSimEnabled) {
+    isSimActivated = true;
+  }
+  if(cmd.substring(9).equals("SIM,DISABLE")) {
+    isSimEnabled = false;
+    isSimActivated = false;
+  }
+
+  //receive simulated pressure data
+  if(cmd.substring(0,14).equals("CMD,2033,SIMP,") && isSimActivated) {
+    
+    PRESSURE = (float) cmd.substring(14).toInt() / 100; //in hPa for altitude calc
+    //maybe this calculation works idk ahahaha
+    ALTITUDE = 44330*(1 - pow(PRESSURE/1013.25, 1/5.255)) - groundAltitude;
+  }
+
+  //calibrate altitude to ground level
+  if(cmd.substring(9).equals("CAL")) {
+
+    groundAltitude = pres.bmp.readAltitude(pres.SEALEVELPRESSURE_HPA);
+  }
+
+  //turn on / off audio beacon
+  if(cmd.substring(9).equals("BCN,ON")) {
+
+    digitalWrite(buzPin, HIGH);
+  }
+
+  if(cmd.substring(9).equals("BCN,OFF")) {
+
+    digitalWrite(buzPin, LOW);
+  }
+
+  //reset packet count to zero
+  if(cmd.substring(9).equals("RSTPKT")) {  
+
+    PACKET_COUNT = 0;
+  }
 }
 
 void collectSendStore() {
@@ -515,64 +656,19 @@ void collectSendStore() {
   String packet = buildPacket();
 
   //print for testing!
-  //Serial.println(packet);
+  //if(gfix.valid.location) {
+  Serial.println(packet);
+  //}
 
-  //xbee.sendPacket(packet);
+  if(isTelemetryTransmissionOn) {
+    xbeePort.print(packet);
+  }
+  
+  String cmd = xbee.recieveInstructions();
+  if(! cmd.equals("N")) {
+    executeCommand(cmd);
+  }
   sd.write(packet);
-}
-
-void executeCommand(String cmd) {
-  //toggle telemetry transmission
-  if(cmd.endsWith("CX,ON")) {
-    //activate payload telemtry transmission
-  }
-  if(cmd.endsWith("CX,OFF")) {
-    //turn off transmissions
-  }
-
-  //set clock
-  if(cmd.startsWith("CMD,2033,ST,") && cmd.length() == 20) {
-    int h = cmd.substring(12,14).toInt();
-    int m = cmd.substring(15,17).toInt();
-    int s = cmd.substring(18,20).toInt();
-    unsigned long t = h*3600 + m*60 + s;
-    cl.clockSetTime(t);
-  }
-  if(cmd.endsWith("|GPS")) {
-    cl.clockSetTime(gps.tgps.time.value());
-  }
-
-
-  //enable, activate, disable simulation mode
-  if(cmd.endsWith("SIM,ENABLE")) {
-    isSimEnabled = true;
-  }
-  if(cmd.endsWith("SIM,ACTIVATE") && isSimEnabled) {
-    isSimActivated = true;
-  }
-  if(cmd.endsWith("SIM,DISABLE")) {
-    isSimEnabled = false;
-    isSimActivated = false;
-  }
-
-  if(cmd.startsWith("CMD,2033,SIMP,") && isSimActivated) {
-    //need to calculate altitude somhow from this
-    PRESSURE = (float) cmd.substring(14).toInt() / 1000.0;
-    ALTITUDE = 44330*(1 - pow(10*PRESSURE/1013.25, 1/5.255)) - groundAltitude;
-  }
-
-  if(cmd.endsWith("CAL")) {
-    groundAltitude = pres.bmp.readAltitude(pres.SEALEVELPRESSURE_HPA);
-  }
-
-  if(cmd.endsWith("BCN,ON")) {
-    //maybe just activate beacon directly with no boolean.
-    //i need beacon code first to do this
-    isBeaconActivated = true;
-  }
-  if(cmd.endsWith("BCN,OFF")) {
-    isBeaconActivated = false;
-  }
 }
 
 void setup() {
@@ -580,51 +676,78 @@ void setup() {
   Serial.begin(9600);
   Wire.begin();
   pres.begin();
+  pres.bmp.performReading();
   groundAltitude = pres.bmp.readAltitude(pres.SEALEVELPRESSURE_HPA);
-  gps.begin();
+  Serial.println(groundAltitude);
+  gpsPort.begin(9600); //Serial1
   accelGy.begin();
+  xbee.begin();
   sd.begin();
   cl.begin();
-  //set up servos and other small stuff here
-
+  
+  pinMode(solPin, OUTPUT);
+  pinMode(buzPin, OUTPUT);
+  
+  if(ina219.begin() != true) {
+    Serial.println("INA219 begin failed");
+  } else {
+    ina219.linearCalibrate(ina219Reading_mA, extMeterReading_mA);
+  }
+  
+  servo.attach(servoPin);
 
   timer.begin(collectSendStore,1000000); // 1 Hz interval
-  
-
 }
-
 
 void loop() {
 
   //state machine
-
   if(isBeforeLaunch) {
 
-    /*check xbee's recieve instrucions to 
-      calibrate altitude for real flight or do simulation mode */
-      //toggle next state
+    //check xbee's recieve instructions to 
+    //calibrate altitude for real flight or do simulation mode 
 
+    //if accelerating upwards, switch to isAscent state
+    if(accelZ > 14.7) {
+      isBeforeLaunch = false;
+      isAscent = true;
+    }
   }else if(isAscent) {
+    
+    //if max altitude greater than current altitude switch to fastDescent state
+    if(maxAltitude <= ALTITUDE) {
+      maxAltitude = ALTITUDE;
+    } else {
+      isAscent = false;
+      isFastDescent = true;
 
-    //check if max altitude is reached ~ 700m
-      //deploy skirt mechanism and seperate nose cone from CanSat
-      //toggle next state
-
+      //turn on audio beacon
+      digitalWrite(buzPin, HIGH);
+    }
   }else if(isFastDescent) {
 
-    //check if altitude is less than 100m
-      //actuate solenoid to release parachute from its container
-      //toggle next state
+    //if altitude at 100m switch to slowDescent state
+    if(ALTITUDE <= 100.0) {
+      isFastDescent = false;
+      isSlowDescent = true;
 
+      //release parachute housing lid
+      digitalWrite(solPin, HIGH);
+
+      //release skirt and nosecone
+      //servo rotation angle subject to change!
+      servo.write(90); //angle in deg
+    }
   }else if(isSlowDescent) {
 
-    //check if velocity is near zero or if cansat is near starting altitude
-      //toggle to next state
-
+    //if vehicle is not moving switch to on ground state
+    if(rotX <= 0.1 && rotX >= -0.1 && rotY <= 0.1 && rotY >= -0.1 && ROT_Z <= 0.1 && ROT_Z >= -0.1) {
+      isSlowDescent = false;
+      isOnGround = true;
+    }
   }else if(isOnGround) {
 
-    //recieve audio beacon command from ground station to retrieve cansat
+    //wait for commands from ground station
 
   }
-
 }
