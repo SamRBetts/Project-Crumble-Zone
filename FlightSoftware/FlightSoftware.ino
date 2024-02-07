@@ -17,6 +17,11 @@
   #include <Streamers.h>
   #include <GPSport.h>
 
+//sea level pressure
+  //use this website to get sea level pressure 1 mbar = 1 hpa
+  // https://weather.us/observations
+  #define SEALEVELPRESSURE_HPA 1013.25
+
 //state variables
 
   bool isBeforeLaunch = true;
@@ -35,11 +40,11 @@ bool isSimActivated = false;
 //audio beacon state
 bool isBeaconActivated = false;
 
-//solenoid pins
+//solenoid pin
 #define solPin 2
 
-//audio beacon pins
-#define buzPin 4
+//audio beacon pin
+#define buzPin 3
 
 //servo
 #define servoPin 6
@@ -53,7 +58,8 @@ Servo servo;
   float extMeterReading_mA = 15;
 
 //timer variable
-IntervalTimer timer;
+IntervalTimer timer1;
+IntervalTimer timer2;
 
 //gps
   NMEAGPS  gps; // This parses the GPS characters
@@ -79,8 +85,6 @@ IntervalTimer timer;
   String STATE = String("HI I LIKE THIS STATE!");
   //altitude meters relative to ground level with resolution of 0.1m
   float ALTITUDE = 0.0;
-  //ground altitude for altitude calibration (not in packet)
-  float groundAltitude = 0.0;
   //air speed in meters per second with the pitot tube during ascent and descent
   float AIR_SPEED = 0.0;
   //'P' inicates the heat shield deployed, 'N' otherwise
@@ -110,13 +114,19 @@ IntervalTimer timer;
   //rotation rate of cansat in degrees per second with 0.1 resolution
   float ROT_Z = 0.0;
   //text of last command received and processed by CanSat.
-  String CMD_ECHO = String("ITSCOMMANDINTIME");
+  String CMD_ECHO = String("NULL");
+
+//packet string
+String packet;
 
 //other variables for state machine
   float accelZ;
   float maxAltitude;
   float rotX;
   float rotY;
+  //ground altitude for altitude calibration (not in packet)
+  float groundAltitude = 0.0;
+  float simGroundAltitude = 44330.0*(1.0 - pow(939.48/SEALEVELPRESSURE_HPA, 1.0/5.255));
 
 
 //classes for each device improves code organization for large projects like this
@@ -128,8 +138,6 @@ class PressureSensor {
     #define BMP_MISO 12
     #define BMP_MOSI 11
     #define BMP_CS 10
-
-    const float SEALEVELPRESSURE_HPA = 1013.25;
 
     Adafruit_BMP3XX bmp;
 
@@ -199,7 +207,6 @@ class AccelGyroMag {
 };
 
 class PitotTube {
-
 
   public:
 
@@ -285,8 +292,6 @@ class PitotTube {
           break;
       }
 
-      
-
       deltaP = (float) (P_dat - MS4525ZeroCounts)/MS4525Span*MS4525FullScaleRange; //kPa
       if(deltaP < 0.0) {
         deltaP = 0.0;
@@ -322,7 +327,7 @@ class XBeeCommunication {
       xbeePort.begin(XBeeBaud);
     }
 
-    void sendPacket(String s) {
+    void transmitPacket(String s) {
       xbeePort.print(s);
     }
 
@@ -385,13 +390,45 @@ class SDCard {
         Serial.println("no SD card!");
         return;
       }
-      
+
       if(SD.exists("packet_data.csv")) {
         SD.remove("packet_data.csv");
+        myFile = SD.open("packet_data.csv", FILE_WRITE);
+        if(myFile) {
+          myFile.println("TEAM_ID, MISSION_TIME, PACKET_COUNT, MODE, STATE, ALTITUDE, AIR_SPEED, HS_DEPLOYED, PC_DEPLOYED, TEMPERATURE, VOLTAGE, PRESSURE, GPS_TIME, GPS_ALTITUDE, GPS_LATITUDE, GPS_LONGITUDE, GPS_SATS, TILT_X, TILT_Y, ROT_Z, CMD_ECHO");
+          myFile.close();
+        } else {
+        // if the file didn't open, print an error:
+        Serial.println("error opening test.txt");
+        }
+
       }
     }
 
-    void write(String data) {
+    void saveCurrentPacket(String data) {
+      
+      //new file every time function is called
+      if(SD.exists("current_packet.txt")) {
+        SD.remove("current_packet.txt");
+      } else {
+        Serial.println("file does not exist, creating new file");
+      }
+      
+      // open the file.
+      myFile = SD.open("current_packet.txt", FILE_WRITE);
+
+      // if the file opened okay, write to it:
+      if (myFile) {
+        myFile.println(data);
+        // close the file:
+        myFile.close();
+      } else {
+        // if the file didn't open, print an error:
+        Serial.println("error opening test.txt");
+      }
+    }
+
+    void storePacket(String data) {
       // open the file.
       myFile = SD.open("packet_data.csv", FILE_WRITE);
 
@@ -403,6 +440,105 @@ class SDCard {
       } else {
         // if the file didn't open, print an error:
         Serial.println("error opening test.txt");
+      }
+    }
+
+    void restoreVariables() {
+      // open the file.
+      Serial.println("HI");
+      myFile = SD.open("current_packet.txt");
+
+      Serial.println("HI");
+
+      String data;
+      // if the file is available, write to it:
+      if (myFile) {
+        uint8_t columnNum = 0;
+        String packetVar = "";
+        
+        Serial.println("HI");
+
+        while (myFile.available()) {
+          char c = myFile.read();
+
+          if(c != ',') {
+            packetVar += String(c);
+          } else {
+            Serial.println(packetVar);
+            switch(columnNum) {
+              //skip TEAM_ID since it's constant
+              case 1:
+                MISSION_TIME = packetVar;
+                break;
+              case 2:
+                PACKET_COUNT = packetVar.toInt();
+                break;
+              case 3:
+                MODE = (char) packetVar.toInt();
+                break;
+              case 4:
+                STATE = packetVar;
+                break;
+              case 5:
+                ALTITUDE = packetVar.toFloat();
+                break;
+              case 6:
+                AIR_SPEED = packetVar.toFloat();
+                break;
+              case 7:
+                HS_DEPLOYED = (char) packetVar.toInt();
+                break;
+              case 8:
+                PC_DEPLOYED = (char) packetVar.toInt();
+                break;
+              case 9:
+                TEMPERATURE = packetVar.toFloat();
+                break;
+              case 10:
+                VOLTAGE = packetVar.toFloat();
+                break;
+              case 11:
+                PRESSURE = packetVar.toFloat();
+                break;
+              case 12:
+                GPS_TIME = packetVar;
+                break;
+              case 13:
+                GPS_ALTITUDE = packetVar.toFloat();
+                break;
+              case 14:
+                GPS_LATITUDE = packetVar.toFloat();
+                break;
+              case 15:
+                GPS_LONGITUDE = packetVar.toFloat();
+                break;
+              case 16:
+                GPS_SATS = packetVar.toInt();
+                break;
+              case 17:
+                TILT_X = packetVar.toFloat();
+                break;
+              case 18:
+                TILT_Y = packetVar.toFloat();
+                break;
+              case 19:
+                ROT_Z = packetVar.toFloat();
+                break;
+              case 20:
+                CMD_ECHO = packetVar;
+                break;
+            }
+
+            columnNum++;
+          }
+
+        }
+        Serial.println(data);
+        myFile.close();
+      }  
+      // if the file isn't open, pop up an error:
+      else {
+        Serial.println("error opening datalog.txt");
       }
     }
 };
@@ -475,7 +611,7 @@ void collectData() {
   
   pres.bmp.performReading();
   if(! isSimActivated) {
-    ALTITUDE = pres.bmp.readAltitude(pres.SEALEVELPRESSURE_HPA) - groundAltitude;
+    ALTITUDE = pres.bmp.readAltitude(SEALEVELPRESSURE_HPA) - groundAltitude;
     PRESSURE = pres.bmp.readPressure() / 1000.0; // kPa
   }
 
@@ -495,9 +631,9 @@ void collectData() {
   sensors_event_t temp;
   accelGy.sox.getEvent(&accel, &gyro, &temp);
   accelZ = accel.acceleration.z;
-  rotX = gyro.gyro.x;
-  rotY = gyro.gyro.y;
-  ROT_Z = gyro.gyro.z;
+  rotX = gyro.gyro.x*RAD_TO_DEG;
+  rotY = gyro.gyro.y*RAD_TO_DEG;
+  ROT_Z = gyro.gyro.z*RAD_TO_DEG;
 
   TEMPERATURE = (pres.bmp.readTemperature() + temp.temperature) / 2.0;
 
@@ -507,7 +643,6 @@ void collectData() {
 
   while (gps.available( gpsPort )) {
     gfix = gps.read();
-    //Serial.println("HI");
 
 
     if(gfix.valid.time) {
@@ -559,33 +694,30 @@ String buildPacket() {
         + String(PACKET_COUNT) + String(", ")
         + String(MODE) + String(", ")
         + buildStateString() + String(", ")
-        + String(ALTITUDE) + String(", ")
-        + String(AIR_SPEED) + String(", ")
+        + String(ALTITUDE,1) + String(", ")
+        + String(AIR_SPEED,1) + String(", ")
         + String(HS_DEPLOYED) + String(", ")
         + String(PC_DEPLOYED) + String(", ")
-        + String(TEMPERATURE) + String(", ")
-        + String(VOLTAGE) + String(", ")
-        + String(PRESSURE) + String(", ")
+        + String(TEMPERATURE,1) + String(", ")
+        + String(VOLTAGE,1) + String(", ")
+        + String(PRESSURE,1) + String(", ")
         + GPS_TIME + String(", ")
-        + String(GPS_ALTITUDE) + String(", ")
-        + String(GPS_LATITUDE) + String(", ")
-        + String(GPS_LONGITUDE) + String(", ")
+        + String(GPS_ALTITUDE,1) + String(", ")
+        + String(GPS_LATITUDE,4) + String(", ")
+        + String(GPS_LONGITUDE,4) + String(", ")
         + String(GPS_SATS) + String(", ")
-        + String(TILT_X) + String(", ")
-        + String(TILT_Y) + String(", ")
-        + String(ROT_Z) + String(", ")
-        + CMD_ECHO 
-        + String(">");
+        + String(TILT_X,2) + String(", ")
+        + String(TILT_Y,2) + String(", ")
+        + String(ROT_Z,1) + String(", ")
+        + CMD_ECHO + String(">");
 }
 
 void executeCommand(String cmd) {
   
   if(cmd.substring(9).equals("CX,ON")) {
-    Serial.println("HI");
     isTelemetryTransmissionOn = true;
   }
   if(cmd.substring(9).equals("CX,OFF")) {
-    Serial.println("HI");
     isTelemetryTransmissionOn = false;
   }
 
@@ -612,24 +744,28 @@ void executeCommand(String cmd) {
   }
   if(cmd.substring(9).equals("SIM,ACTIVATE") && isSimEnabled) {
     isSimActivated = true;
+    MODE = 'S';
+    //prevents ascent state from occuring until pressure data is sent
+    ALTITUDE = -1.0;
   }
   if(cmd.substring(9).equals("SIM,DISABLE")) {
     isSimEnabled = false;
     isSimActivated = false;
+    MODE = 'F';
   }
 
   //receive simulated pressure data
   if(cmd.substring(0,14).equals("CMD,2033,SIMP,") && isSimActivated) {
     
-    PRESSURE = (float) cmd.substring(14).toInt() / 100; //in hPa for altitude calc
+    PRESSURE = (float) cmd.substring(14).toInt() / 1000.0;
     //maybe this calculation works idk ahahaha
-    ALTITUDE = 44330*(1 - pow(PRESSURE/1013.25, 1/5.255)) - groundAltitude;
+    ALTITUDE = 44330.0*(1.0 - pow(10.0*PRESSURE/SEALEVELPRESSURE_HPA, 1.0/5.255)) - simGroundAltitude;
   }
 
   //calibrate altitude to ground level
   if(cmd.substring(9).equals("CAL")) {
 
-    groundAltitude = pres.bmp.readAltitude(pres.SEALEVELPRESSURE_HPA);
+    groundAltitude = pres.bmp.readAltitude(SEALEVELPRESSURE_HPA);
   }
 
   //turn on / off audio beacon
@@ -643,48 +779,79 @@ void executeCommand(String cmd) {
     digitalWrite(buzPin, LOW);
   }
 
+  //turn on / off audio beacon
+  if(cmd.substring(9).equals("PR,ON")) {
+
+    digitalWrite(solPin, HIGH);
+  }
+
+  if(cmd.substring(9).equals("PR,OFF")) {
+
+    digitalWrite(solPin, LOW);
+  }
+
   //reset packet count to zero
   if(cmd.substring(9).equals("RSTPKT")) {  
 
     PACKET_COUNT = 0;
   }
+
+  String cmdNoComma;
+  for(uint8_t i = 9; i < cmd.length(); i++) {
+    char c = cmd.charAt(i);
+    if(c != ',') {
+      cmdNoComma += String(c);
+    }
+  }
+  CMD_ECHO = cmdNoComma;
 }
 
-void collectSendStore() {
+void collectAndSave() {
   collectData();
   MISSION_TIME = cl.getUTCtime();
-  String packet = buildPacket();
+  packet = buildPacket();
 
+  //sd.saveCurrentPacket(packet.substring(1, packet.length() - 1));
+}
+
+void sendStoreReceive() {
+  //packet = buildPacket();
   //print for testing!
   //if(gfix.valid.location) {
   Serial.println(packet);
   //}
 
   if(isTelemetryTransmissionOn) {
-    xbeePort.print(packet);
+    xbee.transmitPacket(packet);
+    PACKET_COUNT++;
   }
   
   String cmd = xbee.recieveInstructions();
   if(! cmd.equals("N")) {
+    Serial.println(cmd);
     executeCommand(cmd);
   }
-  sd.write(packet);
+  sd.storePacket(packet.substring(1, packet.length() - 1));
 }
 
 void setup() {
 
-  Serial.begin(9600);
+  Serial.begin(9600); while (!Serial)
   Wire.begin();
+
+  delay(500);
+
+  sd.begin();
+  
+  //sd.restoreVariables();
+  
   pres.begin();
-  pres.bmp.performReading();
-  groundAltitude = pres.bmp.readAltitude(pres.SEALEVELPRESSURE_HPA);
-  Serial.println(groundAltitude);
   gpsPort.begin(9600); //Serial1
   accelGy.begin();
   xbee.begin();
-  sd.begin();
-  cl.begin();
   
+  cl.begin();
+
   pinMode(solPin, OUTPUT);
   pinMode(buzPin, OUTPUT);
   
@@ -696,10 +863,14 @@ void setup() {
   
   servo.attach(servoPin);
 
-  timer.begin(collectSendStore,1000000); // 1 Hz interval
+  timer1.begin(collectAndSave,100000); //  10 Hz interval
+  timer2.begin(sendStoreReceive,1000000); // 1 Hz interval
+
+  Serial.println("HI");
 }
 
 void loop() {
+
 
   //state machine
   if(isBeforeLaunch) {
@@ -708,9 +879,19 @@ void loop() {
     //calibrate altitude for real flight or do simulation mode 
 
     //if accelerating upwards, switch to isAscent state
-    if(accelZ > 14.7) {
-      isBeforeLaunch = false;
-      isAscent = true;
+    
+    if(! isSimActivated) { 
+      //use rocket acceleration to activate next state
+      if(accelZ >  39.2) {
+        isBeforeLaunch = false;
+        isAscent = true;
+      }
+    } else {
+      //In simulation mode, use precalculated altitude to initiate state
+      if(ALTITUDE > 10) {
+        isBeforeLaunch = false;
+        isAscent = true;
+      }
     }
   }else if(isAscent) {
     
@@ -723,6 +904,9 @@ void loop() {
 
       //turn on audio beacon
       digitalWrite(buzPin, HIGH);
+      
+      //Skirt (Heatshield) passivley deploys
+      HS_DEPLOYED = 'P';
     }
   }else if(isFastDescent) {
 
@@ -731,8 +915,9 @@ void loop() {
       isFastDescent = false;
       isSlowDescent = true;
 
-      //release parachute housing lid
+      //release parachute housing lid to deploy parachute
       digitalWrite(solPin, HIGH);
+      PC_DEPLOYED = 'C';
 
       //release skirt and nosecone
       //servo rotation angle subject to change!
@@ -740,10 +925,24 @@ void loop() {
     }
   }else if(isSlowDescent) {
 
-    //if vehicle is not moving switch to on ground state
-    if(rotX <= 0.1 && rotX >= -0.1 && rotY <= 0.1 && rotY >= -0.1 && ROT_Z <= 0.1 && ROT_Z >= -0.1) {
-      isSlowDescent = false;
-      isOnGround = true;
+    if(! isSimActivated) {
+      //if vehicle is not moving switch to on ground state
+      //i dont like this ill change it later
+      if(rotX <= 0.5 && rotX >= -0.5 && rotY <= 0.5 && rotY >= -0.5 && ROT_Z <= 0.5 && ROT_Z >= -0.5) {
+        isSlowDescent = false;
+        isOnGround = true;
+      }
+    } else {
+      /*
+        simulation pressure data goes from 8m (just above ground) to 3m (landing) 
+        with standard sea level pressure and ground level calibration from first pressure value
+        so check altitude < 5m
+        basically hardcoded but o well
+      */
+      if(ALTITUDE < 5.0) {
+        isSlowDescent = false;
+        isOnGround = true;
+      }
     }
   }else if(isOnGround) {
 
