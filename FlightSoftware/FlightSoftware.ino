@@ -25,20 +25,20 @@
 //state variables
 
   bool isBeforeLaunch = true;
-  bool isAscent = false;
-  bool isFastDescent = false;
-  bool isSlowDescent = false;
-  bool isOnGround = false;
+  bool isAscent;
+  bool isFastDescent;
+  bool isSlowDescent;
+  bool isOnGround;
 
 //payload telemetry transmission state
-bool isTelemetryTransmissionOn = false;
+bool isTelemetryTransmissionOn;
 
 //simulation states
-bool isSimEnabled = false;
-bool isSimActivated = false;
+bool isSimEnabled;
+bool isSimActivated;
 
 //audio beacon state
-bool isBeaconActivated = false;
+bool isBeaconActivated;
 
 //solenoid pin
 #define solPin 2
@@ -48,6 +48,9 @@ bool isBeaconActivated = false;
 
 //servo
 #define servoPin 6
+#define deployDuration 0.25 //in seconds. change if needed
+uint32_t servoStartTime;
+bool isServoMoving;
 Servo servo;
 
 //wattmeter
@@ -920,8 +923,10 @@ void loop() {
       PC_DEPLOYED = 'C';
 
       //release skirt and nosecone
-      //servo rotation angle subject to change!
-      servo.write(90); //angle in deg
+      //servo timer start
+      isServoMoving = true;
+      servoStartTime = millis();
+      servo.write(180); // move forward
     }
   }else if(isSlowDescent) {
 
@@ -948,5 +953,11 @@ void loop() {
 
     //wait for commands from ground station
 
+  }
+
+  if(isServoMoving) {
+    if(millis() - servoStartTime > deployDuration) {
+      servo.write(90); //stop
+    }
   }
 }
