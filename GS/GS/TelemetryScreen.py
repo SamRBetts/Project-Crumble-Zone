@@ -7,23 +7,12 @@ Author: Betts, Sam
 Date: November 29, 2023
 """
 
-"""
-TODO: 
-    
-"""
+from PyQt5.QtWidgets import QMainWindow, QWidget, QGridLayout, QHBoxLayout, QVBoxLayout
+from PyQt5.QtCore import QTimer
+from PyQt5 import QtGui
 
 
-import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QComboBox, QLabel, QGridLayout, QHBoxLayout,QPushButton, QVBoxLayout, QWidget,QRadioButton
-from PyQt5.QtGui import QColor, QPainter
-from PyQt5.QtCore import QTimer,QDateTime
-#import pyqtgraph as pg
-from pyqtgraph import PlotWidget, plot
-import numpy as np
-import time 
-import random
 #custom modules
-import WindowSettings
 import Dictionary_telemetry_point
 from PacketHelper import PacketHandler
 from CSVHelper import CSVHandler
@@ -39,11 +28,30 @@ class MainWindow(QMainWindow):
         Handles updates to screens from packets 
     
     Methods:
-    - 
+    - __init__: creates GUI layout, plots, labels, buttons, and such
+    - cmdSelected(): returns the current radio button command selected
+        triggered when a radio button is checked
+    - startTimer(): starts qtimer, connects it to checkSerial, clears the plots
+    - stopTimer(): stops the qtimer, saves the csv file if populated
+    - updateData(): calls updates to all telemetry graphs and labels with a 
+        given incoming packet. Accesses the index in the list (found using 
+        the dictionary), update each plot and label
+    - checkSerial():  This method checks the serial buffer using the Xbee class 
+        and is called at every Qtimer interval
+        If Xbee sees start bit, then calls readData, then updateData
+    - readData(): Once the Xbee class returns true to checkBuffer, calls CSV classes
+        to splice the incoming packet into a list for easy indexing, calls updateData
+    - sendCommand(): reads radio button, calls cmd class to create specified comand
+        calls Xbee class to send data
+    - SimMode(): calls csv to open file dialog, starts qtimer (calls startTimer()),
+        sets boolean SimMode to true
+    - sendSimP(): called in checkSerial when boolean SimMode is true. gets the next
+        pressure value from csv using csv class, checks to make sure pressure values
+        have not run out (if they have, stops the timer)
+    - clearPlots(): clears the data off all the plots: re-initializes them 
     
     """
     
-    #def __init__(self,xbee:XbeeHelper):
     def __init__(self):
         super(MainWindow, self).__init__()
         #initialize variables
@@ -58,7 +66,8 @@ class MainWindow(QMainWindow):
         self.csv_handler = CSVHandler()
         self.xbee = XbeeHelper() #initializes contact with Xbee on serial po
 
-        self.setWindowTitle("Telemetry Screen V2.5")
+        self.setWindowTitle("Telemetry Screen V3")
+        self.setWindowIcon(QtGui.QIcon('CrumpleZone_cv_cropped.svg'))
 
         #Create the layouts for organizing the screen
         main_layout_top = QGridLayout()
@@ -81,8 +90,6 @@ class MainWindow(QMainWindow):
         cmd_terminal_layout.addLayout(cmd_term_layout_a,0,0)
         cmd_terminal_layout.addLayout(cmd_term_layout_b,0,1)
 
-        #need to vert layouts for each column
-        
         command_layout.addLayout(startstop_layout,0,0)#add top bottom layout
         command_layout.addLayout(cmd_terminal_layout,2,0)
         
@@ -139,7 +146,6 @@ class MainWindow(QMainWindow):
         parameter_layout2.addWidget(DisplayLabel("Mode",0))
 
         #Initialize all graphs as empty axes
-        
         self.alt_graph = TelemetryGraph("Altitude","m")
         self.alt_graph.plotFirst("Barometer")
         self.alt_graph.plotSecond("GPS")
@@ -187,12 +193,6 @@ class MainWindow(QMainWindow):
         
         cmd_term_lbl = DisplayLabel("~~~~~~~~~~~~~~~COMMAND TERMINAL~~~~~~~~~~~~~~",0) 
         command_layout.addWidget(cmd_term_lbl,1,0)
-                
-        
-        #cmd_combobox = QComboBox()
-        #cmd_combobox.addItems(['Turn telemetry on','Turn telemetry off','Set time GPS', 'Set time UTC', '',''])
-        #command_layout.addWidget(cmd_combobox)
-        
         
         #add send command button
         self.send_button = Button("SEND COMMAND")
@@ -225,7 +225,7 @@ class MainWindow(QMainWindow):
         bcn_off_rb = CommandRadioButton('BCN - Audio Beacon OFF', self)
         bcn_off_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_a.addWidget(bcn_off_rb)
-        
+        """
         pr_on_rb = CommandRadioButton('PR - Parachute Rentention ON', self)
         pr_on_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_b.addWidget(pr_on_rb)
@@ -233,6 +233,7 @@ class MainWindow(QMainWindow):
         pr_off_rb = CommandRadioButton('PR - Parachute Rentention OFF', self)
         pr_off_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_b.addWidget(pr_off_rb)
+        """
     
         cal_rb = CommandRadioButton('CAL - Set 0m altitude', self)
         cal_rb.toggled.connect(self.cmdSelected)
@@ -250,9 +251,9 @@ class MainWindow(QMainWindow):
         sim_dis_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_b.addWidget(sim_dis_rb)
         
-        sim_dis_rb = CommandRadioButton('RSTPKT - Reset Packet Count', self)
-        sim_dis_rb.toggled.connect(self.cmdSelected)
-        cmd_term_layout_b.addWidget(sim_dis_rb)
+        rstpkt_rb = CommandRadioButton('RSTPKT - Reset Packet Count', self)
+        rstpkt_rb.toggled.connect(self.cmdSelected)
+        cmd_term_layout_b.addWidget(rstpkt_rb)
         
         self.current_cmd = telem_on_rb #initialize as a random radio button for now
         #boolean values to check for simulation mode
@@ -264,7 +265,10 @@ class MainWindow(QMainWindow):
         widget.setLayout(main_layout)
         self.setCentralWidget(widget)
         self.setGeometry(0,40,1950,950)
-                
+        
+        """
+        Should connect to Xbee when click the start button or start the screen?
+        """        
         try:
             self.xbee.connect(port)
         except: 
@@ -274,7 +278,6 @@ class MainWindow(QMainWindow):
         
         self.packets_rx =0 
         
-       # self.timer.start()
     def cmdSelected(self):
         rb = self.sender()
         
@@ -283,12 +286,7 @@ class MainWindow(QMainWindow):
             self.send_button.setEnabled(True)
             
     def startTimer(self):
-        '''
-        if self.xbee.checkPort():
-                pass
-        else:
-            self.xbee.connect(port)
-        '''
+       
         try: 
             self.xbee.connect(port)
         except: 
@@ -301,6 +299,7 @@ class MainWindow(QMainWindow):
         self.timer.timeout.connect(self.checkSerial)
         self.start_button.setEnabled(False)
         self.stop_button.setEnabled(True)
+        self.clearPlots()
         
     def stopTimer(self):
         self.timer.stop()
@@ -318,12 +317,51 @@ class MainWindow(QMainWindow):
             
         self.stop_button.setEnabled(False)
         self.start_button.setEnabled(True)
-        self.clearPlots()
         
-       
+    def checkSerial(self):
+        """
+        This method checks the serial buffer using the Xbee class and is called
+        at every Qtimer interval
+        If Xbee sees start bit, then calls readData, then updateData
+        """
+                
+        print("checking serial: ")
+     
+        if self.xbee.checkBuffer()>0: #if there is a start bit waiting in serial port...
+            print("Start bit found")    
+            incoming_packet = self.xbee.getData()
+            #print(incoming_packet)
+            self.readData(incoming_packet)
+        
+        else:
+            print("No start bit found")
+        
+        if self.simmode:
+            self.sendSimP()
+                   
+    def readData(self,incoming_packet:str):
+        
+        """
+        Once the Xbee class says it has found a start bit, this method is called
+        this reads an entire packet using the xbee class and splices it for
+        the csv and telemetry classes. After splicing, updateData is called in telemetry screen
+        and the live plots are updated
+        """        
+        data_list = self.packet_handler.splicePacket(incoming_packet) #splice packet to list type
+        #print(data_list)
+        
+        if data_list is None:
+            pass
+        else:
+            self.csv_handler.appendCSV(data_list) #add packet (as a list) to data in csvhelper
+            #print(self.csv_handler.getCurrData())
+            
+            #send data to telemetry screen to update
+            #update telemetry screen
+            self.updateData(data_list)
     def updateData(self, incoming_packet):
         """
-        call updates to all telemetry graphs and labels with a given incoming packet
+        calls updates to all telemetry graphs and labels with a given incoming packet
         accesses the index in the list (found using the dictionary), update each plot or label
         """       
         self.packets_rx  = self.packets_rx +1 
@@ -367,52 +405,10 @@ class MainWindow(QMainWindow):
         
         z = float(incoming_packet[self.telemetry_points['ROT_Z']])
         self.rot_graph.updatePlot([z])
-            
-    def checkSerial(self):
-        """
-        This method checks the serial buffer using the Xbee class and is called
-        at every Qtimer interval
-        If Xbee sees start bit, then calls readData, then updateData
-        """
-                
-        print("checking serial: ")
-     
-        if self.xbee.checkBuffer()>0: #if there is a start bit waiting in serial port...
-            print("Start bit found")    
-            incoming_packet = self.xbee.getData()
-            #print(incoming_packet)
-            self.readData(incoming_packet)
-        
-        else:
-            print("No start bit found")
-        
-        if self.simmode:
-            self.sendSimP()
-                   
-    def readData(self,incoming_packet:str):
-        """
-        Once the Xbee class says it has found a start bit, this method is called
-        this reads an entire packet using the xbee class and splices it for
-        the csv and telemetry classes. After splicing, updateData is called in telemetry screen
-        and the live plots are updated
-        """        
-        data_list = self.packet_handler.splicePacket(incoming_packet) #splice packet to list type
-        #print(data_list)
-        
-        if data_list is None:
-            pass
-        else:
-            self.csv_handler.appendCSV(data_list) #add packet (as a list) to data in csvhelper
-            #print(self.csv_handler.getCurrData())
-            
-            #send data to telemetry screen to update
-            #update telemetry screen
-            self.updateData(data_list)
-        
-        
+               
     def sendCommand(self):
         """
-        Connected to the send command button. Reads the combo box and calls the CMD
+        Connected to the send command button. Reads the radio buttons and calls the CMD
         class to create the selected command. Use Xbee class to send the data. 
         """
         #now for a nightmare of if statemetns bc I don't know how else to do this T.T
@@ -434,6 +430,8 @@ class MainWindow(QMainWindow):
             command = self.cmd_helper.cmdTogglePR(option)
         elif cmd_name == "CAL":
             command = self.cmd_helper.cmdCalAlt()
+        elif cmd_name == "RSTPKT":
+            command = self.cmd_helper.cmdResetPkt()
         elif cmd_name == "SIM":
             command = self.cmd_helper.cmdSimMode(option)
             if option == "ENABLE":
@@ -458,11 +456,8 @@ class MainWindow(QMainWindow):
         if self.simmode_enabled and self.simmode_activated:
             print("SIM MODE ACTIVATED")
             self.SimMode()
-        #self.cmd_helper.cmdToggleAudioBcn("ON")
         
     def SimMode(self):
-             
-        
         """
         SIMULATION MODE
        
@@ -500,6 +495,10 @@ class MainWindow(QMainWindow):
             self.xbee.sendData(cmd)
         
     def clearPlots(self):
+        """
+        clear all plots (and maybe labels?) when start button is pressed
+        TODO: TEST THIS
+        """
         self.pressure_graph.reset()
         self.alt_graph.reset()
         self.volt_graph.reset()        

@@ -17,8 +17,7 @@ class PacketHandler():
     PacketHandler: interfaces with the packet recieved by the Xbee
     Attributes:
     - 
-    
-    
+        
     Methods:
     - splicePacket(): takes string from Xbee and extracts every telemetry point 
     from the recieved packet into a list object for TelemetryScreen
@@ -61,11 +60,9 @@ class PacketHandler():
     
     
     def createPacket(self, packet_list:list):
-       
-       #put all the points in the list into a string - making a packet
        """
-       TODO: add an escape character or something to make it more packet-like
-       
+       put all the points in the list into a string - making a packet
+       for testing purposes only, no start/stop bits included
        """
        packet_string = ','.join(packet_list)
        

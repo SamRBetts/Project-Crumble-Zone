@@ -5,18 +5,13 @@ Created on Wed Mar  6 11:37:53 2024
 @author: bettssr
 """
 
-import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QComboBox, QLabel, QGridLayout, QHBoxLayout,QPushButton, QVBoxLayout, QWidget,QRadioButton
+from PyQt5.QtWidgets import QLabel,QPushButton ,QRadioButton
 from PyQt5.QtGui import QColor, QPainter
-from PyQt5.QtCore import QTimer,QDateTime
 #import pyqtgraph as pg
-from pyqtgraph import PlotWidget, plot
-import numpy as np
-import time 
-import random
+from pyqtgraph import PlotWidget
+
 #custom modules
 import WindowSettings
-
 
 #inherit graphing widget to create custom graphing widget
 class TelemetryGraph(PlotWidget):
@@ -38,7 +33,7 @@ class TelemetryGraph(PlotWidget):
         self.setTitle(title,color="k",size = "20px")
         self.x = [0]
         self.ylabel = ylabel
-        legend = self.addLegend()
+        self.addLegend()
         #legend.setBrush('k') #- makes legend black, but looks really bad. 
         self.doublePlot = 0
         

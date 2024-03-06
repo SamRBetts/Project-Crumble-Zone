@@ -9,11 +9,6 @@ PySerial API: https://pyserial.readthedocs.io/en/latest/pyserial_api.html
 
 """
 
-"""
-TODO: 
-like the whole thing
-"""
-
 from serial import Serial
 import time 
 
@@ -25,15 +20,18 @@ class XbeeHelper():
     Attributes:
     - 
     
-    
     Methods:
     - __init__(): creates object
-    - initializeXbee(): checks Xbee for Baud rate, connection, settings
-    - getData(): returns a string with data. 
-    - sendData(): sends a command with formatted command from CMDHelper
-    - checkConnection()
-    - clearBuffer(): clears the buffer (data that hasn't been read yet)
-    
+    - connect(): establishes serial object with baud and comm
+    - disconnect(): closes serial communication
+    - getData(): returns a string with data - reads until the stop bit is found
+        returns string 
+    - sendData(): sends a string through serial
+    - checkPort(): returns true is serial xbee is connected, false if not
+    - checkBuffer(): if data in the buffer, reads serial until start bit is found,
+        Check to make sure didn't time out, return 1 (true) if start bit is found
+    - printBuffer(): prints everything currently in the serial buffer (testing only)
+    - readLine(): testing another way to read until start bit, testing only
     """
     
     def __init__(self):
@@ -53,13 +51,11 @@ class XbeeHelper():
         
     def getData(self):
         #is called when data is detected in the buffer
-        
         #decodes the data (utf-8)
-        
+
         
         """
-        TODO: figure out the total size, make sure this removes the start/end bit
-        
+        TODO: figure out the total size,        
         .read number of bytes,save that, then look at startbit
         struct - turn data streams into byte vice verse
         
@@ -75,6 +71,7 @@ class XbeeHelper():
         
         #return "<2033,0,1,2,3,5>"
         #return packet.decode('utf-8')
+        #remove the stop bit from packet
         packet = packet[:-1]
         return packet
     
@@ -98,9 +95,10 @@ class XbeeHelper():
 
     
            buffer_list = [str(x) for a,x in enumerate(str(buffer))] 
-           #check if there is a character in the buffer, and if there is, 
+           #check if there is a start bit in the buffer, and if there is, 
     
            if(len(buffer_list) >= 1 and '<' in buffer_list):
+               #reset buffer 
                buffer = 0
                return 1
            else: 
@@ -108,17 +106,16 @@ class XbeeHelper():
                return 0
        else: 
            return 0 
-       
-       
-       
-     
+            
         #experiement with reset_input_buffer() if this doesn't work :>
        
         
     def printBuffer(self):
+        #testing only
         print(self.xbee.in_waiting)               
         
     def readLine(self):
+        #testing only
         print(self.xbee.read_until('>'.encode('utf-8'),600))
         
     def checkPort(self):

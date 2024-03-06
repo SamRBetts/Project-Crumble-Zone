@@ -5,13 +5,6 @@ Author: Betts, Sam
 Date: Dec 6, 2023
 """
 
-"""
-TODO: 
-do some commmand checks to make sure works as should
-
-
-"""
-
 from datetime import datetime
 
 cmd = "CMD"
@@ -19,10 +12,7 @@ TEAM_ID = "2033"
     
 
 class CMDHelper():
-    
-    
-
-    
+        
     def __init__(self):
         pass
     
@@ -49,8 +39,12 @@ class CMDHelper():
         return f"<{cmd},{TEAM_ID},ST,{utc_time}>"
         #return f"{utc_time}"
    
+    #not currently used
     def cmdTogglePR(self, mode:str):
         return f"<{cmd},{TEAM_ID},PR,{mode}>"
+    
+    def cmdResetPkt(self):
+        return f"<{cmd},{TEAM_ID},RSTPKT>"
         
     def cmdSimMode(self, mode:str):
         """

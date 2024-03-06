@@ -55,42 +55,17 @@ from PyQt5.QtWidgets import QApplication
 
 def main():
 
-    #put all the main execution here
-    
-  
-    #xbee = XbeeHelper("COM9") #initializes contact with Xbee on serial port
-    ch = CSVHandler()
-
-
-
     # Create an application instance
-    app = QApplication(sys.argv)
-    #window.setGeometry(100, 100, 400, 200)
-    
-    # Create a label
-    #label = QLabel("Altitude", main)
-    #label.move(150, 80)
-    
-    
-    #main = MainWindow(xbee)
-    main = MainWindow()
-    # Show the main window
-    #main.startTimer()
-    
-    
-    
+    app = QApplication(sys.argv)    
+    main = MainWindow()   
+    #show main window
     main.show()
-    
     # Start the application event loop
     app.exec() 
-    
-    
     #after done executing: 
     main.xbee.disconnect()
     main.stopTimer()
-    
-    
-    
+
     #packet = pd.read_csv('telemetry_packet_example.csv',header=None,squeeze=True)
    
     #csv_helper.appendCSV(packet)
@@ -117,9 +92,7 @@ def main():
     ch = CMDHelper()
     #print(ch.cmdSetTime("GPS"))
     print(ch.cmdSimMode("FARTS"))
-    """
-    
-   
+    """  
     
     """
     packeth = PacketHandler()
@@ -141,9 +114,6 @@ def main():
         main.update(data_list)
     
     """
-    
-    
-
 
 if __name__ == "__main__":
     main()
