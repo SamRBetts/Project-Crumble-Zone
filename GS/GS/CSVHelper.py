@@ -109,8 +109,9 @@ class CSVHandler():
         if self.SIMP_index == len(self.pressure_vals):
             send = None
         else:
-            send = self.presure_vals[self.SIMP_index]
+            send = self.pressure_vals[self.SIMP_index]
             self.SIMP_index += 1  
         
+        #print(send)
         return send 
         

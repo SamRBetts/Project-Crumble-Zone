@@ -9,10 +9,7 @@ Date: November 29, 2023
 
 """
 TODO: 
-- Add way to pick and send commands (button+label)
--create .csav file button
--add simulation mode button
-
+    
 """
 
 
@@ -32,126 +29,10 @@ from PacketHelper import PacketHandler
 from CSVHelper import CSVHandler
 from CMDHelper import CMDHelper
 from XBeeHandler import XbeeHelper
+from ScreenHelpers import TelemetryGraph, DisplayLabel, CommandRadioButton, Button
 
-port = "COM9"
+port = "COM11"
 
-
-#inherit graphing widget to create custom graphing widget
-class TelemetryGraph(PlotWidget):
-    """
-    TelemetryGraph: inherit graphing widget to create custom graphing widget
-    Attributes:
-    - title: title of the graph
-    - x: the data associated with the x-axis, python list 
-    - y: the data associated with the y-axis
-    - ylabel: label for the y data
-
-    Methods:
-    - update(): appends data to the y array and automatically updates based on 
-        current mission time
-    """
-    def __init__(self, title,ylabel, parent=None):
-        super().__init__(parent)
-        self.setBackground('w')
-        self.setTitle(title,color="k",size = "20px")
-        self.x = [0]
-        self.ylabel = ylabel
-        legend = self.addLegend()
-        #legend.setBrush('k') #- makes legend black, but looks really bad. 
-        self.doublePlot = 0
-        
-              
-        styles = {'font-size':'22px'}
-        self.setLabel('left', ylabel, **styles)
-        self.setLabel('bottom', "time (s)", **styles) 
-    
-    def plotFirst(self,y1label):
-        #self.plot(self.x,y1,pen=WindowSettings.pen1,name=y1label)
-        self.y1 = [0]
-        self.data_line = self.plot(self.x, self.y1, pen=WindowSettings.pen1,name=y1label)
-
-        
-        
-    def plotSecond(self,y2label): 
-       
-        self.y2= [0]
-        self.data_line2= self.plot(self.x,self.y2,pen=WindowSettings.pen2,name=y2label)
-        self.doublePlot = 1 #flag saying there are 2 sets of data on plot 
-        
-    def updatePlot(self, new_data):
-        #where new data is a list type 
-        
- 
-        #print(new_data)
-        """
-        TODO: maybe make x the time value instead of packet number
-        remove 0 value - may need to make a clear list function when 0 altitude
-        is set with the button 
-        """
-        
-        #get rid of initialized 0 bc I don't know what I'm supposed to do
-        if self.x[0]==0:
-            self.x.pop(0)
-            self.y1.pop(0)
-            if self.doublePlot:
-                self.y2.pop(0)
-                
-        self.x.append(len(self.x)+1)  # Add a new value 1 higher than the last.
-        
-        self.y1.append(new_data[0])  
-        
-        if self.doublePlot:
-            self.y2.append(new_data[1])
-            self.data_line2.setData(self.x,self.y2)
-
-        self.data_line.setData(self.x, self.y1)  # Update the data.
-        
-
-        
-        
-
-
-class DisplayLabel(QLabel):
-    """
-    DisplayLabel: Inherits QLabel to add custom colors
-     and font size depending on type (data or name)
-    Attributes:
-    - text: text to be displayed on the label (string type)
-    - func: 1 for data label and 0 for a name label
-    Methods:
-    - paintEvent(): fills in the background color
-    """
-    def __init__(self, text: str, func: int, parent=None):
-        super().__init__(text, parent)
-        self.setStyleSheet("font-size: 20px;")  # Set the stylesheet
-        self.func = func
- 
-
-    def paintEvent(self, event):
-         painter = QPainter(self)
-         if (self.func==1):
-             painter.fillRect(self.rect(), QColor(WindowSettings.default_color))
-    
-         super().paintEvent(event)
-
-class CommandRadioButton(QRadioButton):
-    """
-    custom radio button class - all command radio buttons are members
-    """
-    def __init__(self, text: str, parent=None):
-        super().__init__(text, parent)
-        self.setStyleSheet("font-size: 16px;")
-
-class Button(QPushButton):
-    """
-    custom button class - all command buttons are members
-    """
-    def __init__(self, text: str, parent=None):
-        super().__init__(text, parent)
-        self.setStyleSheet("font-size: 16px;")    
-
-
-#main window go brrrrrrr
 class MainWindow(QMainWindow):
     """
     MainWindow: Creates the Main Window with layouts for all graphs and labels
@@ -218,29 +99,29 @@ class MainWindow(QMainWindow):
 
         
         #Define all data display labels
-        self.mis_time_lbl = DisplayLabel("hh:mm:ss",1)
+        self.mis_time_lbl = DisplayLabel("hh:mm:ss UTC",1)
         parameter_layout1_b.addWidget(self.mis_time_lbl)
         
-        self.GPS_time_lbl = DisplayLabel("GPS hh:mm:ss UTC",1)
+        self.GPS_time_lbl = DisplayLabel("hh:mm:ss UTC",1)
         parameter_layout1_b.addWidget(self.GPS_time_lbl)
 
         self.packet_count = 0;
-        self.pkt_tx_lbl = DisplayLabel("XX",1)
+        self.pkt_tx_lbl = DisplayLabel("0",1)
         parameter_layout1_b.addWidget(self.pkt_tx_lbl)
         
         self.cmd_echo_lbl = DisplayLabel("NONE",1)
         parameter_layout1_b.addWidget(self.cmd_echo_lbl)
         
-        self.state_lbl = DisplayLabel("FLIGHT MODE",1)
+        self.state_lbl = DisplayLabel("NONE",1)
         parameter_layout2_b.addWidget(self.state_lbl)
         
-        self.HS_dpl_lbl = DisplayLabel("YES",1)
+        self.HS_dpl_lbl = DisplayLabel("NONE",1)
         parameter_layout2_b.addWidget(self.HS_dpl_lbl)
         
-        self.PC_dpl_lbl = DisplayLabel("N",1)
+        self.PC_dpl_lbl = DisplayLabel("NONE",1)
         parameter_layout2_b.addWidget(self.PC_dpl_lbl)
         
-        self.GPS_sats_lbl = DisplayLabel("3",1)
+        self.GPS_sats_lbl = DisplayLabel("0",1)
         parameter_layout2_b.addWidget(self.GPS_sats_lbl)
         
         self.mode_dpl_lbl = DisplayLabel("NONE",1)
@@ -264,7 +145,7 @@ class MainWindow(QMainWindow):
         self.alt_graph.plotSecond("GPS")
         main_layout_bottom.addWidget(self.alt_graph, 0, 0)
                 
-        self.pressure_graph = TelemetryGraph("Pressure", "Pa")
+        self.pressure_graph = TelemetryGraph("Pressure", "kPa")
         self.pressure_graph.plotFirst("Barometer")
         main_layout_bottom.addWidget(self.pressure_graph,1,0)
         
@@ -282,7 +163,7 @@ class MainWindow(QMainWindow):
         self.tilt_graph.plotSecond("Y")
         main_layout_bottom.addWidget(self.tilt_graph,1,1)
         
-        self.rot_graph = TelemetryGraph("Z Rotation","rpm")
+        self.rot_graph = TelemetryGraph("Z Rotation","deg/s")
         self.rot_graph.plotFirst("MPU6050")
         main_layout_bottom.addWidget(self.rot_graph, 2,1)
         
@@ -290,7 +171,7 @@ class MainWindow(QMainWindow):
         self.voltage_graph.plotFirst( "Voltage Sensor")
         main_layout_bottom.addWidget(self.voltage_graph,0,2)
         
-        self.temp_graph = TelemetryGraph("Temperature", "deg F")
+        self.temp_graph = TelemetryGraph("Temperature", "deg C")
         self.temp_graph.plotFirst("BMP0909")
         main_layout_bottom.addWidget(self.temp_graph,1,2)
         
@@ -304,7 +185,7 @@ class MainWindow(QMainWindow):
         startstop_layout.addWidget(self.stop_button)
         self.stop_button.clicked.connect(self.stopTimer)
         
-        cmd_term_lbl = DisplayLabel("~~~~~~~~~~~~~~~COMMAND TERMINAL~~~~~~~~~~~~~~~",0) 
+        cmd_term_lbl = DisplayLabel("~~~~~~~~~~~~~~~COMMAND TERMINAL~~~~~~~~~~~~~~",0) 
         command_layout.addWidget(cmd_term_lbl,1,0)
                 
         
@@ -369,11 +250,11 @@ class MainWindow(QMainWindow):
         sim_dis_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_b.addWidget(sim_dis_rb)
         
-        simp_rb = CommandRadioButton('SIMP - Send simulated altitude', self)
-        simp_rb.toggled.connect(self.cmdSelected)
-        cmd_term_layout_b.addWidget(simp_rb)
+        sim_dis_rb = CommandRadioButton('RSTPKT - Reset Packet Count', self)
+        sim_dis_rb.toggled.connect(self.cmdSelected)
+        cmd_term_layout_b.addWidget(sim_dis_rb)
         
-        self.current_cmd = simp_rb #initialize as a random radio button for now
+        self.current_cmd = telem_on_rb #initialize as a random radio button for now
         #boolean values to check for simulation mode
         self.simmode_enabled = False
         self.simmode_activated = False
@@ -384,6 +265,14 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(widget)
         self.setGeometry(0,40,1950,950)
                 
+        try:
+            self.xbee.connect(port)
+        except: 
+            self.setWindowTitle("Telemetry Screen V2.5 - Arduino NOT connected")
+            self.start_button.setEnabled(False)
+            self.stop_button.setEnabled(False)
+        
+        self.packets_rx =0 
         
        # self.timer.start()
     def cmdSelected(self):
@@ -394,12 +283,16 @@ class MainWindow(QMainWindow):
             self.send_button.setEnabled(True)
             
     def startTimer(self):
-        #'''
+        '''
         if self.xbee.checkPort():
-            pass
+                pass
         else:
             self.xbee.connect(port)
-        #'''
+        '''
+        try: 
+            self.xbee.connect(port)
+        except: 
+            print("NO XBEE CONNECTED")
         #self.xbee.connect(port)
         #time.sleep(1)
                 
@@ -425,6 +318,7 @@ class MainWindow(QMainWindow):
             
         self.stop_button.setEnabled(False)
         self.start_button.setEnabled(True)
+        self.clearPlots()
         
        
     def updateData(self, incoming_packet):
@@ -432,16 +326,20 @@ class MainWindow(QMainWindow):
         call updates to all telemetry graphs and labels with a given incoming packet
         accesses the index in the list (found using the dictionary), update each plot or label
         """       
+        self.packets_rx  = self.packets_rx +1 
         self.mis_time_lbl.setText(incoming_packet[self.telemetry_points['MISSION_TIME']])
         self.GPS_time_lbl.setText(incoming_packet[self.telemetry_points['MISSION_TIME']])
         #self.GPS_time_lbl.setText(self.cmd_helper.getUTCTime())
         #TODO: change this to number of packets recieved, NOT SENT
-        self.pkt_tx_lbl.setText(incoming_packet[self.telemetry_points['PACKET_COUNT']])
+        self.pkt_tx_lbl.setText(f"{self.packets_rx}")
+
+        #self.pkt_tx_lbl.setText(incoming_packet[self.telemetry_points['PACKET_COUNT']])
         self.mode_dpl_lbl.setText(incoming_packet[self.telemetry_points['MODE']])
         self.state_lbl.setText(incoming_packet[self.telemetry_points['STATE']])
         self.GPS_sats_lbl.setText(incoming_packet[self.telemetry_points['GPS_SATS']])
         self.HS_dpl_lbl.setText(incoming_packet[self.telemetry_points['HS_DEPLOYED']])
         self.PC_dpl_lbl.setText(incoming_packet[self.telemetry_points['PC_DEPLOYED']])
+        self.cmd_echo_lbl.setText(incoming_packet[self.telemetry_points['CMD_ECHO']])
   
         alt = float(incoming_packet[self.telemetry_points['ALTITUDE']])
         gps_alt = float(incoming_packet[self.telemetry_points['GPS_ALTITUDE']])
@@ -489,7 +387,7 @@ class MainWindow(QMainWindow):
             print("No start bit found")
         
         if self.simmode:
-            self.sendSIMP()
+            self.sendSimP()
                    
     def readData(self,incoming_packet:str):
         """
@@ -545,15 +443,7 @@ class MainWindow(QMainWindow):
             elif option == "DISABLE":
                 self.simmode_activated = False
                 self.simmode_enabled = False
-        elif cmd_name == "SIMP":
-            if self.simmode_enabled and self.simmode_activated:
-                print("SIM MODE ACTIVATED")
-                self.SimMode()
-                #open file dialog
-                #TODO: if both boolean values are true, open up file dialog and automatically send pressured values. 
-                #maybe implemented a ARE YOU SURE??
                 
-                #this one needs changed to send pressure values every second, not correct right now
             else:
                 print('\x1b[0;30;41m' + 'Warning: Simulation mode NOT ENABLED/ACTIVATED' + '\x1b[0m')
 
@@ -565,7 +455,9 @@ class MainWindow(QMainWindow):
             #give an error message
             print('\x1b[0;30;41m' + 'XBEE PORT NOT OPEN' + '\x1b[0m')
 
-        
+        if self.simmode_enabled and self.simmode_activated:
+            print("SIM MODE ACTIVATED")
+            self.SimMode()
         #self.cmd_helper.cmdToggleAudioBcn("ON")
         
     def SimMode(self):
@@ -599,8 +491,22 @@ class MainWindow(QMainWindow):
         #get name of command to send to xbee
         if pressure == None: #stop the timer if out of values 
             self.stopTimer()
+            self.simmode = False
+            self.simmode_activated = False
+            self.simmode_enabled = False
         else: 
             cmd = self.cmd_helper.cmdSimP(pressure)
             #use xbee helper to send next value
-            self.xbee.sendData()
+            self.xbee.sendData(cmd)
         
+    def clearPlots(self):
+        self.pressure_graph.reset()
+        self.alt_graph.reset()
+        self.volt_graph.reset()        
+        self.speed_pitot_graph.reset()
+        self.temp_graph.reset()
+        self.voltage_graph.reset()
+        self.pressure_graph.reset()
+        self.GPS_graph.reset()
+        self.tilt_graph.reset()
+        self.rot_graph.reset()

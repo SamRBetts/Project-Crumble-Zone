@@ -38,7 +38,7 @@ class XbeeHelper():
     
     def __init__(self):
        #set-up communication with the Xbee for first-time startup
-       self.timeo = 5; #set number of seconds until connection times out
+       self.timeo = .5 #set number of seconds until connection times out
        
        self.escape_bit=">".encode('utf-8')
        self.start_bit="<".encode('utf-8')
@@ -68,8 +68,9 @@ class XbeeHelper():
         #recieving garbage data don't care about
         #self.xbee.read_until(self.start_bit)
         #now we actually have data, save it 
+        
         packet = self.xbee.read_until(self.escape_bit).decode('utf-8')
-       
+        print(packet)
         
         
         #return "<2033,0,1,2,3,5>"
@@ -86,26 +87,31 @@ class XbeeHelper():
        
     def checkBuffer(self):
     
-       buffer = self.xbee.read_until(self.start_bit)
-       #buffer = self.xbee.read(1).decode('utf-8')
-       #time.sleep(3)
-       #put buffer into list to look through
-     
-       buffer_list = [str(x) for a,x in enumerate(str(buffer))] 
-       #print(buffer_list)
-       #self.xbee.reset_input_buffer()
-       #print('<' in buffer_list)
+       buffer_list = None
        
-       #check if there is a character in the buffer, and if there is, 
-       #check for start bit           
-       #if(buffer >= 1 and self.start_bit in buffer_list): 
-       if(len(buffer_list) >= 1 and '<' in buffer_list):
-            buffer = 0
-            return 1
+       #print(self.xbee.in_waiting)
+       
+       if (self.xbee.in_waiting>0):  
+           
+           buffer = self.xbee.read_until(self.start_bit)
+           #print(buffer)
+
+    
+           buffer_list = [str(x) for a,x in enumerate(str(buffer))] 
+           #check if there is a character in the buffer, and if there is, 
+    
+           if(len(buffer_list) >= 1 and '<' in buffer_list):
+               buffer = 0
+               return 1
+           else: 
+               buffer = 0
+               return 0
        else: 
-           buffer = 0
            return 0 
        
+       
+       
+     
         #experiement with reset_input_buffer() if this doesn't work :>
        
         

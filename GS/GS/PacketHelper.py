@@ -12,16 +12,6 @@ PRESSURE, GPS_TIME, GPS_ALTITUDE, GPS_LATITUDE, GPS_LONGITUDE,
 GPS_SATS, TILT_X, TILT_Y, ROT_Z, CMD_ECHO [,,OPTIONAL_DATA]
 """
 
-"""
-TODO:
-    -come up with the format of the packet 
-    -
-
-"""
-
-#import pandas as pd 
-
-
 class PacketHandler():
     """
     PacketHandler: interfaces with the packet recieved by the Xbee
