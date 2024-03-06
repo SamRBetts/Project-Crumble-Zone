@@ -5,12 +5,6 @@ Author: Betts, Sam
 Date: November 29, 2023
 """
 
-"""
-TODO:
-
-"""
-
-
 import pandas as pd 
 from PyQt5.QtWidgets import QFileDialog
 
@@ -20,7 +14,6 @@ class CSVHandler():
     """
     CSVCreater: Handles all csv functions.
     
-        
         Note: Telemetry Packet includes  altitude, air pressure, temperature,
             battery voltage, probe tilt angles, air speed, command echo, and GPS
             coordinates that include latitude, longitude, altitude and number of
@@ -33,12 +26,11 @@ class CSVHandler():
         appendCSV: add new packet data to current telemetry data data frame
         getCurrData(): returns current data frame wit hall telemetry data
         
-        ~~~Yet to be implemented~~~
-        openCSV(): opens file explorer to chose a csv file to splice
-        spliceCSV(): returns array of values in the rows of the file ignoring columns
-            preceded by # and as many arrays as there are columns
-        getSimPressure(): uses openCSV and splice CSV to open csv and return an 
-            of pressure values
+        openFile(): creates file diaglog to select a csv file, returns text in csv
+        spliceSIMP(): returns list of pressure values (all values in columns) 
+            ignoring #. List is stored as instance variable in this class
+        getNextSIMP(): get the next pressure value stored in the pressure values list,
+            increase line index, return next pressure value
     """
    
    
@@ -109,8 +101,9 @@ class CSVHandler():
         if self.SIMP_index == len(self.pressure_vals):
             send = None
         else:
-            send = self.presure_vals[self.SIMP_index]
+            send = self.pressure_vals[self.SIMP_index]
             self.SIMP_index += 1  
         
+        #print(send)
         return send 
         
