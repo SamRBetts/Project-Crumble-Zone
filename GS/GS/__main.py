@@ -1,4 +1,4 @@
-# Filename: __main.py
+A# Filename: __main.py
 """
 Description: This main application will run all the required code to operate
     the ground station including running the telemetry screen and all relevant

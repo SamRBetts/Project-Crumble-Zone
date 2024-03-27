@@ -272,7 +272,7 @@ class MainWindow(QMainWindow):
         try:
             self.xbee.connect(port)
         except: 
-            self.setWindowTitle("Telemetry Screen V2.5 - Arduino NOT connected")
+            self.setWindowTitle("Telemetry Screen V3 - Xbee NOT connected")
             self.start_button.setEnabled(False)
             self.stop_button.setEnabled(False)
         
