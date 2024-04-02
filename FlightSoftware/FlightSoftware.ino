@@ -69,7 +69,7 @@ IntervalTimer timer2;
   gps_fix  gfix; // This holds on to the latest values
 
 //gps / xbee hardware serial
-//#define gpsPort Serial1
+  #define gpsPort Serial1
   #define xbeePort Serial2
 
 //packet variables
@@ -408,7 +408,7 @@ class SDCard {
       }
     }
 
-    void saveCurrentPacket(String data) {
+    void cacheCurrentPacket(String data) {
       
       //new file every time function is called
       if(SD.exists("current_packet.txt")) {
@@ -422,7 +422,7 @@ class SDCard {
 
       // if the file opened okay, write to it:
       if (myFile) {
-        myFile.println(data);
+        myFile.print(data);
         // close the file:
         myFile.close();
       } else {
@@ -448,26 +448,19 @@ class SDCard {
 
     void restoreVariables() {
       // open the file.
-      Serial.println("HI");
       myFile = SD.open("current_packet.txt");
 
-      Serial.println("HI");
-
-      String data;
-      // if the file is available, write to it:
       if (myFile) {
         uint8_t columnNum = 0;
         String packetVar = "";
-        
-        Serial.println("HI");
 
         while (myFile.available()) {
           char c = myFile.read();
-
+          //Serial.println("HI");
           if(c != ',') {
             packetVar += String(c);
           } else {
-            Serial.println(packetVar);
+            myFile.read(); //removes space after each comma
             switch(columnNum) {
               //skip TEAM_ID since it's constant
               case 1:
@@ -477,7 +470,7 @@ class SDCard {
                 PACKET_COUNT = packetVar.toInt();
                 break;
               case 3:
-                MODE = (char) packetVar.toInt();
+                MODE = packetVar.charAt(0);
                 break;
               case 4:
                 STATE = packetVar;
@@ -489,10 +482,10 @@ class SDCard {
                 AIR_SPEED = packetVar.toFloat();
                 break;
               case 7:
-                HS_DEPLOYED = (char) packetVar.toInt();
+                HS_DEPLOYED = packetVar.charAt(0);
                 break;
               case 8:
-                PC_DEPLOYED = (char) packetVar.toInt();
+                PC_DEPLOYED = packetVar.charAt(0);
                 break;
               case 9:
                 TEMPERATURE = packetVar.toFloat();
@@ -530,13 +523,11 @@ class SDCard {
               case 20:
                 CMD_ECHO = packetVar;
                 break;
-            }
-
+           }
             columnNum++;
+            packetVar = "";
           }
-
         }
-        Serial.println(data);
         myFile.close();
       }  
       // if the file isn't open, pop up an error:
@@ -622,8 +613,10 @@ void collectData() {
   sensors_event_t mag; 
   accelGy.lis3mdl.getEvent(&mag);
 
-  TILT_X = atan2(-mag.magnetic.z,mag.magnetic.x)*RAD_TO_DEG-104;
-  TILT_Y = atan2(-mag.magnetic.z,mag.magnetic.y)*RAD_TO_DEG-104;
+  Serial.println(mag.magnetic.z);
+  
+  TILT_X = atan2(-(mag.magnetic.z + 18.07),mag.magnetic.x - 18.23) * RAD_TO_DEG;
+  TILT_Y = atan2(-(mag.magnetic.z + 18.07),mag.magnetic.y + 20.58) * RAD_TO_DEG;
 
   //i dont think this works but it was worth a try
   //TILT_X =  mag.magnetic.roll
@@ -644,9 +637,10 @@ void collectData() {
 
   VOLTAGE = ina219.getBusVoltage_V();
 
+/*
   while (gps.available( gpsPort )) {
     gfix = gps.read();
-
+    trace_all( DEBUG_PORT, gps, gfix );
 
     if(gfix.valid.time) {
       uint8_t h = gfix.dateTime.hours;
@@ -661,13 +655,16 @@ void collectData() {
     }
 
     if(gfix.valid.altitude) {
+      Serial.println(gfix.altitude());
       GPS_ALTITUDE = gfix.altitude();
     }
     
     if(gfix.valid.satellites) {
+      Serial.println(gfix.satellites);
       GPS_SATS = gfix.satellites;
     }
   }
+  */
   
   //trace_all( DEBUG_PORT, gps, gfix );
 
@@ -781,8 +778,6 @@ void executeCommand(String cmd) {
 
     digitalWrite(buzPin, LOW);
   }
-
-  //turn on / off audio beacon
   if(cmd.substring(9).equals("PR,ON")) {
 
     digitalWrite(solPin, HIGH);
@@ -814,7 +809,6 @@ void collectAndSave() {
   MISSION_TIME = cl.getUTCtime();
   packet = buildPacket();
 
-  //sd.saveCurrentPacket(packet.substring(1, packet.length() - 1));
 }
 
 void sendStoreReceive() {
@@ -834,6 +828,7 @@ void sendStoreReceive() {
     Serial.println(cmd);
     executeCommand(cmd);
   }
+  sd.cacheCurrentPacket(packet.substring(1, packet.length() - 1));
   sd.storePacket(packet.substring(1, packet.length() - 1));
 }
 
@@ -842,18 +837,21 @@ void setup() {
   Serial.begin(9600); while (!Serial)
   Wire.begin();
 
-  delay(500);
+  delay(50);
+
+  cl.begin();
 
   sd.begin();
   
-  //sd.restoreVariables();
+  Serial.println("Restoring packet variables:");
+  sd.restoreVariables();
+  //cl.clockSetTime(MISSION_TIME.substring(0,2).toInt() * 3600 + MISSION_TIME.substring(3,5).toInt() * 60 + MISSION_TIME.substring(6).toInt());
+  Serial.println(buildPacket());
   
   pres.begin();
   gpsPort.begin(9600); //Serial1
   accelGy.begin();
   xbee.begin();
-  
-  cl.begin();
 
   pinMode(solPin, OUTPUT);
   pinMode(buzPin, OUTPUT);
@@ -866,10 +864,8 @@ void setup() {
   
   servo.attach(servoPin);
 
-  timer1.begin(collectAndSave,100000); //  10 Hz interval
+  timer1.begin(collectAndSave,  100000); //  10 Hz interval
   timer2.begin(sendStoreReceive,1000000); // 1 Hz interval
-
-  Serial.println("HI");
 }
 
 void loop() {
@@ -958,6 +954,38 @@ void loop() {
   if(isServoMoving) {
     if(millis() - servoStartTime > deployDuration) {
       servo.write(90); //stop
+    }
+  }
+
+
+
+
+  //gps loop
+
+  while (gps.available( gpsPort )) {
+    gfix = gps.read();
+    //trace_all( DEBUG_PORT, gps, gfix );
+
+    if(gfix.valid.time) {
+      uint8_t h = gfix.dateTime.hours;
+      uint8_t m = gfix.dateTime.minutes;
+      uint8_t s = gfix.dateTime.seconds;
+      GPS_TIME = (h < 10 ? "0" : "") + String(h) + ":" + (m < 10 ? "0" : "") + String(m) + ":" + (s < 10 ? "0" : "") + String(s);
+    } 
+
+    if(gfix.valid.location) {
+      GPS_LATITUDE = gfix.latitude();
+      GPS_LONGITUDE = gfix.longitude();
+    }
+
+    if(gfix.valid.altitude) {
+      //Serial.println(gfix.altitude());
+      GPS_ALTITUDE = gfix.altitude();
+    }
+    
+    if(gfix.valid.satellites) {
+      //Serial.println(gfix.satellites);
+      GPS_SATS = gfix.satellites;
     }
   }
 }
