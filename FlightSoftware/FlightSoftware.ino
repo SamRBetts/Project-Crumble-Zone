@@ -613,7 +613,7 @@ void collectData() {
   sensors_event_t mag; 
   accelGy.lis3mdl.getEvent(&mag);
 
-  Serial.println(mag.magnetic.z);
+  //Serial.println(mag.magnetic.z);
   
   TILT_X = atan2(-(mag.magnetic.z + 18.07),mag.magnetic.x - 18.23) * RAD_TO_DEG;
   TILT_Y = atan2(-(mag.magnetic.z + 18.07),mag.magnetic.y + 20.58) * RAD_TO_DEG;
@@ -834,7 +834,10 @@ void sendStoreReceive() {
 
 void setup() {
 
-  Serial.begin(9600); while (!Serial)
+  pinMode(LED_BUILTIN,OUTPUT);
+  digitalWrite(LED_BUILTIN,HIGH);
+
+  Serial.begin(9600);
   Wire.begin();
 
   delay(50);
@@ -902,7 +905,7 @@ void loop() {
       isFastDescent = true;
 
       //turn on audio beacon
-      digitalWrite(buzPin, HIGH);
+      //digitalWrite(buzPin, HIGH);
       
       //Skirt (Heatshield) passivley deploys
       HS_DEPLOYED = 'P';
