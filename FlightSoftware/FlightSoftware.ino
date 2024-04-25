@@ -48,9 +48,10 @@ bool isBeaconActivated;
 
 //servo
 #define servoPin 6
-#define deployDuration 0.25 //in seconds. change if needed
+#define detatchDuration 4320 //in milliseconds. change if needed
 uint32_t servoStartTime;
-bool isServoMoving;
+bool isServoMovingForwards;
+bool isServoMovingBackwards;
 Servo servo;
 
 //wattmeter
@@ -613,7 +614,7 @@ void collectData() {
   sensors_event_t mag; 
   accelGy.lis3mdl.getEvent(&mag);
 
-  Serial.println(mag.magnetic.z);
+  //Serial.println(mag.magnetic.z);
   
   TILT_X = atan2(-(mag.magnetic.z + 18.07),mag.magnetic.x - 18.23) * RAD_TO_DEG;
   TILT_Y = atan2(-(mag.magnetic.z + 18.07),mag.magnetic.y + 20.58) * RAD_TO_DEG;
@@ -716,6 +717,7 @@ void executeCommand(String cmd) {
   
   if(cmd.substring(9).equals("CX,ON")) {
     isTelemetryTransmissionOn = true;
+    PACKET_COUNT = 0;
   }
   if(cmd.substring(9).equals("CX,OFF")) {
     isTelemetryTransmissionOn = false;
@@ -794,6 +796,11 @@ void executeCommand(String cmd) {
     PACKET_COUNT = 0;
   }
 
+  //Nose cone detatch test command
+  if(cmd.substring(9).equals("DTCH")) {  
+    detatchTest();
+  }
+
   String cmdNoComma;
   for(uint8_t i = 9; i < cmd.length(); i++) {
     char c = cmd.charAt(i);
@@ -802,6 +809,12 @@ void executeCommand(String cmd) {
     }
   }
   CMD_ECHO = cmdNoComma;
+}
+
+void detatchTest() {
+  isServoMovingForwards = true;
+  servoStartTime = millis();
+  servo.write(180); // rotate forward
 }
 
 void collectAndSave() {
@@ -834,7 +847,10 @@ void sendStoreReceive() {
 
 void setup() {
 
-  Serial.begin(9600); while (!Serial)
+  pinMode(LED_BUILTIN,OUTPUT);
+  digitalWrite(LED_BUILTIN,HIGH);
+
+  Serial.begin(9600);
   Wire.begin();
 
   delay(50);
@@ -863,13 +879,17 @@ void setup() {
   }
   
   servo.attach(servoPin);
+  //isServoMovingForwards = true;
+  //servoStartTime = millis();
+  //servo.write(180); // rotate forward
 
   timer1.begin(collectAndSave,  100000); //  10 Hz interval
   timer2.begin(sendStoreReceive,1000000); // 1 Hz interval
+
+  
 }
 
 void loop() {
-
 
   //state machine
   if(isBeforeLaunch) {
@@ -902,7 +922,9 @@ void loop() {
       isFastDescent = true;
 
       //turn on audio beacon
-      digitalWrite(buzPin, HIGH);
+      if(! isSimActivated) {
+        digitalWrite(buzPin, HIGH);
+      }
       
       //Skirt (Heatshield) passivley deploys
       HS_DEPLOYED = 'P';
@@ -920,9 +942,9 @@ void loop() {
 
       //release skirt and nosecone
       //servo timer start
-      isServoMoving = true;
+      isServoMovingForwards = true;
       servoStartTime = millis();
-      servo.write(180); // move forward
+      servo.write(180); // rotate forward
     }
   }else if(isSlowDescent) {
 
@@ -951,14 +973,22 @@ void loop() {
 
   }
 
-  if(isServoMoving) {
-    if(millis() - servoStartTime > deployDuration) {
-      servo.write(90); //stop
+  if(isServoMovingForwards) {
+    if(millis() - servoStartTime > detatchDuration) {
+      servoStartTime = millis();
+      servo.write(0); //rotate backwards
+      isServoMovingForwards = false;
+      isServoMovingBackwards = true;
     }
   }
 
-
-
+  if(isServoMovingBackwards) {
+    if(millis() - servoStartTime > detatchDuration) {
+      servoStartTime = millis();
+      servo.write(90); //stop
+      isServoMovingBackwards = false;
+    }
+  }
 
   //gps loop
 
