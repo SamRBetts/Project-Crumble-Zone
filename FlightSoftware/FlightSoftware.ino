@@ -10,7 +10,7 @@
   #include <DFRobot_INA219.h>
   #include <NMEAGPS.h>
   #include <TimeLib.h>
-  #include <Servo.h>
+  #include <PWMServo.h>
   #include <Wire.h>
   #include <SPI.h>
   #include <SD.h>
@@ -31,7 +31,7 @@
   bool isOnGround;
 
 //payload telemetry transmission state
-bool isTelemetryTransmissionOn;
+bool isTelemetryTransmissionOn = true;
 
 //simulation states
 bool isSimEnabled;
@@ -48,11 +48,11 @@ bool isBeaconActivated;
 
 //servo
 #define servoPin 6
-#define detatchDuration 4320 //in milliseconds. change if needed
+uint16_t detatchDuration = 6333; //in milliseconds. change if needed
 uint32_t servoStartTime;
 bool isServoMovingForwards;
 bool isServoMovingBackwards;
-Servo servo;
+PWMServo servo;
 
 //wattmeter
   DFRobot_INA219_IIC ina219(&Wire, INA219_I2C_ADDRESS4);
@@ -332,7 +332,7 @@ class XBeeCommunication {
     }
 
     void transmitPacket(String s) {
-      xbeePort.print(s);
+      xbeePort.println(s);
     }
 
     String recieveInstructions() {
@@ -798,8 +798,36 @@ void executeCommand(String cmd) {
 
   //Nose cone detatch test command
   if(cmd.substring(9).equals("DTCH")) {  
+    detatchDuration = 6333; 
     detatchTest();
   }
+
+  if(cmd.substring(9).equals("OPEN")) {  
+    servo.write(180); // rotate forward
+    delay(detatchDuration);
+    servo.write(90); // stop
+  }
+
+  if(cmd.substring(9).equals("CLOSE")) {  
+    servo.write(0); // rotate backward
+    delay(detatchDuration);
+    servo.write(90); // stop
+  }
+
+  if(cmd.substring(0,20).equals("CMD,2033,SERVO,DOWN,")) {  
+    servo.write(180); // rotate forward 
+    delay(cmd.substring(20).toInt());
+    servo.write(90); // stop
+  }
+
+  if(cmd.substring(0,18).equals("CMD,2033,SERVO,UP,")) {  
+    servo.write(0); // rotate backward 
+    delay(cmd.substring(18).toInt());
+    servo.write(90); // stop
+  }
+
+
+
 
   String cmdNoComma;
   for(uint8_t i = 9; i < cmd.length(); i++) {
@@ -879,10 +907,7 @@ void setup() {
   }
   
   servo.attach(servoPin);
-  //isServoMovingForwards = true;
-  //servoStartTime = millis();
-  //servo.write(180); // rotate forward
-
+  
   timer1.begin(collectAndSave,  100000); //  10 Hz interval
   timer2.begin(sendStoreReceive,1000000); // 1 Hz interval
 
@@ -983,7 +1008,7 @@ void loop() {
   }
 
   if(isServoMovingBackwards) {
-    if(millis() - servoStartTime > detatchDuration) {
+    if(millis() - servoStartTime > detatchDuration * 1.03) {
       servoStartTime = millis();
       servo.write(90); //stop
       isServoMovingBackwards = false;

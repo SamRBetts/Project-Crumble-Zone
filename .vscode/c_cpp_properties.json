@@ -12,7 +12,7 @@
             ],
             "intelliSenseMode": "gcc-x64",
             "includePath": [
-                "C:\\Users\\kessistj\\AppData\\Local\\Temp\\arduino\\sketches\\1215121F98396320B4E8A43989655547\\pch",
+                "C:\\Users\\kessistj\\Desktop\\ArduinoOutput\\pch",
                 "C:\\Users\\kessistj\\AppData\\Local\\Arduino15\\packages\\teensy\\hardware\\avr\\1.59.0\\cores\\teensy4",
                 "C:\\Users\\kessistj\\Documents\\Arduino\\libraries\\Adafruit_LSM6DS",
                 "C:\\Users\\kessistj\\Documents\\Arduino\\libraries\\Adafruit_BusIO",
@@ -25,7 +25,7 @@
                 "C:\\Users\\kessistj\\Documents\\Arduino\\libraries\\DFRobot_INA219",
                 "C:\\Users\\kessistj\\Documents\\Arduino\\libraries\\NeoGPS\\src",
                 "C:\\Users\\kessistj\\AppData\\Local\\Arduino15\\packages\\teensy\\hardware\\avr\\1.59.0\\libraries\\Time",
-                "C:\\Users\\kessistj\\AppData\\Local\\Arduino15\\packages\\teensy\\hardware\\avr\\1.59.0\\libraries\\Servo",
+                "C:\\Users\\kessistj\\AppData\\Local\\Arduino15\\packages\\teensy\\hardware\\avr\\1.59.0\\libraries\\PWMServo",
                 "C:\\Users\\kessistj\\AppData\\Local\\Arduino15\\packages\\teensy\\hardware\\avr\\1.59.0\\libraries\\SD\\src",
                 "C:\\Users\\kessistj\\AppData\\Local\\Arduino15\\packages\\teensy\\hardware\\avr\\1.59.0\\libraries\\SdFat\\src",
                 "c:\\users\\kessistj\\appdata\\local\\arduino15\\packages\\teensy\\tools\\teensy-compile\\11.3.1\\arm\\arm-none-eabi\\include\\c++\\11.3.1",
@@ -36,7 +36,7 @@
                 "c:\\users\\kessistj\\appdata\\local\\arduino15\\packages\\teensy\\tools\\teensy-compile\\11.3.1\\arm\\arm-none-eabi\\include"
             ],
             "forcedInclude": [
-                "C:\\Users\\kessistj\\AppData\\Local\\Temp\\arduino\\sketches\\1215121F98396320B4E8A43989655547\\pch\\Arduino.h"
+                "C:\\Users\\kessistj\\Desktop\\ArduinoOutput\\pch\\Arduino.h"
             ],
             "cStandard": "c11",
             "cppStandard": "c++17",
