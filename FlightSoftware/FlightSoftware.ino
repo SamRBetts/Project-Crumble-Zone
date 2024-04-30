@@ -295,7 +295,7 @@ class PitotTube {
           Serial.println("Slate");
           break;
         default:
-          Serial.println("Error");
+          Serial.println("Airspeed Sensor Error");
           break;
       }
 
