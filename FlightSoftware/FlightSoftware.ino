@@ -42,13 +42,16 @@ bool isBeaconActivated;
 
 //solenoid pin
 #define solPin 2
+#define parachuteLatchDuration 100
+uint32_t solenoidStartTime;
+bool isSolenoidActivated;
 
 //audio beacon pin
 #define buzPin 3
 
 //servo
 #define servoPin 6
-uint16_t detatchDuration = 6333; //in milliseconds. change if needed
+#define detatchDuration 6333 //in milliseconds. change if needed
 uint32_t servoStartTime;
 bool isServoMovingForwards;
 bool isServoMovingBackwards;
@@ -798,7 +801,6 @@ void executeCommand(String cmd) {
 
   //Nose cone detatch test command
   if(cmd.substring(9).equals("DTCH")) {  
-    detatchDuration = 6333; 
     detatchTest();
   }
 
@@ -962,6 +964,8 @@ void loop() {
       isSlowDescent = true;
 
       //release parachute housing lid to deploy parachute
+      isSolenoidActivated = true;
+      solenoidStartTime = millis();
       digitalWrite(solPin, HIGH);
       PC_DEPLOYED = 'C';
 
@@ -998,6 +1002,15 @@ void loop() {
 
   }
 
+  //turn off solenoid after parachute deploy
+  if(isSolenoidActivated) {
+    if(millis() - solenoidStartTime > parachuteLatchDuration) {
+      digitalWrite(solPin,LOW);
+      isSolenoidActivated = false;
+    }
+  }
+
+  //move servo
   if(isServoMovingForwards) {
     if(millis() - servoStartTime > detatchDuration) {
       servoStartTime = millis();
