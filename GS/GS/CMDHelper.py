@@ -41,7 +41,8 @@ class CMDHelper():
    
     #not currently used
     def cmdTogglePR(self, mode:str):
-        return f"<{cmd},{TEAM_ID},PR,{mode}>"
+        if mode == "ON" or mode == "OFF":
+            return f"<{cmd},{TEAM_ID},PR,{mode}>" 
     
     def cmdResetPkt(self):
         return f"<{cmd},{TEAM_ID},RSTPKT>"
@@ -63,6 +64,11 @@ class CMDHelper():
     
     def cmdCalAlt(self):
         return f"<{cmd},{TEAM_ID},CAL>"
+
+        
+    def cmdServo(self, mode:str):
+            if mode == "DTCH" or mode == "CLOSE" or mode == "OPEN":
+                return f"<{cmd},{TEAM_ID},{mode}>"  
     
     def cmdToggleAudioBcn(self,mode:str):
         """

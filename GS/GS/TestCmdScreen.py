@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Apr 30 22:02:42 2024
+
+@author: bettssr
+"""
+
 # Filename: TelemetryScreen.py
 """
 Description: The Telemetry screen creates all the necessary graphs for the screen
@@ -22,38 +29,15 @@ from ScreenHelpers import TelemetryGraph, DisplayLabel, CommandRadioButton, Butt
 
 port = "COM11"
 
-class MainWindow(QMainWindow):
+class TestCmdScreen(QMainWindow):
     """
     MainWindow: Creates the Main Window with layouts for all graphs and labels
         Handles updates to screens from packets 
     
-    Methods:
-    - __init__: creates GUI layout, plots, labels, buttons, and such
-    - cmdSelected(): returns the current radio button command selected
-        triggered when a radio button is checked
-    - startTimer(): starts qtimer, connects it to checkSerial, clears the plots
-    - stopTimer(): stops the qtimer, saves the csv file if populated
-    - updateData(): calls updates to all telemetry graphs and labels with a 
-        given incoming packet. Accesses the index in the list (found using 
-        the dictionary), update each plot and label
-    - checkSerial():  This method checks the serial buffer using the Xbee class 
-        and is called at every Qtimer interval
-        If Xbee sees start bit, then calls readData, then updateData
-    - readData(): Once the Xbee class returns true to checkBuffer, calls CSV classes
-        to splice the incoming packet into a list for easy indexing, calls updateData
-    - sendCommand(): reads radio button, calls cmd class to create specified comand
-        calls Xbee class to send data
-    - SimMode(): calls csv to open file dialog, starts qtimer (calls startTimer()),
-        sets boolean SimMode to true
-    - sendSimP(): called in checkSerial when boolean SimMode is true. gets the next
-        pressure value from csv using csv class, checks to make sure pressure values
-        have not run out (if they have, stops the timer)
-    - clearPlots(): clears the data off all the plots: re-initializes them 
-    
     """
     
     def __init__(self):
-        super(MainWindow, self).__init__()
+        super(TestCmdScreen, self).__init__()
         #initialize variables
         
         #import the dictionary
@@ -66,7 +50,7 @@ class MainWindow(QMainWindow):
         self.csv_handler = CSVHandler()
         self.xbee = XbeeHelper() #initializes contact with Xbee on serial po
 
-        self.setWindowTitle("Telemetry Screen V3")
+        self.setWindowTitle("Test Command Screen")
         self.setWindowIcon(QtGui.QIcon('CrumpleZone_cv_cropped.svg'))
 
         #Create the layouts for organizing the screen
@@ -86,9 +70,13 @@ class MainWindow(QMainWindow):
         cmd_terminal_layout = QGridLayout() #only 1x2, but just to make it easy   
         cmd_term_layout_a = QVBoxLayout()
         cmd_term_layout_b = QVBoxLayout()
+        cmd_term_layout_c = QVBoxLayout()
+
         
         cmd_terminal_layout.addLayout(cmd_term_layout_a,0,0)
         cmd_terminal_layout.addLayout(cmd_term_layout_b,0,1)
+        cmd_terminal_layout.addLayout(cmd_term_layout_c,0,2)
+
 
         command_layout.addLayout(startstop_layout,0,0)#add top bottom layout
         command_layout.addLayout(cmd_terminal_layout,2,0)
@@ -146,6 +134,7 @@ class MainWindow(QMainWindow):
         parameter_layout2.addWidget(DisplayLabel("Mode",0))
 
         #Initialize all graphs as empty axes
+        """
         self.alt_graph = TelemetryGraph("Altitude","m")
         self.alt_graph.plotFirst("Barometer")
         self.alt_graph.plotSecond("GPS")
@@ -180,6 +169,7 @@ class MainWindow(QMainWindow):
         self.temp_graph = TelemetryGraph("Temperature", "deg C")
         self.temp_graph.plotFirst("BMP0909")
         main_layout_bottom.addWidget(self.temp_graph,1,2)
+        """
         
         
         self.start_button = Button("START SCREEN")
@@ -190,8 +180,8 @@ class MainWindow(QMainWindow):
         self.stop_button = Button("STOP SCREEN")
         startstop_layout.addWidget(self.stop_button)
         self.stop_button.clicked.connect(self.stopTimer)
-        
-        cmd_term_lbl = DisplayLabel("~~~~~~~~~~~~~~~COMMAND TERMINAL~~~~~~~~~~~~~~",0) 
+       
+        cmd_term_lbl = DisplayLabel("~~~~~~~~~~~~~~~~~~~~~COMMAND TERMINAL~~~~~~~~~~~~~~~~~~~~",0) 
         command_layout.addWidget(cmd_term_lbl,1,0)
         
         #add send command button
@@ -220,12 +210,12 @@ class MainWindow(QMainWindow):
 
         bcn_on_rb = CommandRadioButton('BCN - Audio Beacon ON', self)
         bcn_on_rb.toggled.connect(self.cmdSelected)
-        cmd_term_layout_a.addWidget(bcn_on_rb)
+        cmd_term_layout_b.addWidget(bcn_on_rb)
         
         bcn_off_rb = CommandRadioButton('BCN - Audio Beacon OFF', self)
         bcn_off_rb.toggled.connect(self.cmdSelected)
-        cmd_term_layout_a.addWidget(bcn_off_rb)
-        """
+        cmd_term_layout_b.addWidget(bcn_off_rb)
+        
         pr_on_rb = CommandRadioButton('PR - Parachute Rentention ON', self)
         pr_on_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_b.addWidget(pr_on_rb)
@@ -233,27 +223,39 @@ class MainWindow(QMainWindow):
         pr_off_rb = CommandRadioButton('PR - Parachute Rentention OFF', self)
         pr_off_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_b.addWidget(pr_off_rb)
-        """
+        
     
         cal_rb = CommandRadioButton('CAL - Set 0m altitude', self)
         cal_rb.toggled.connect(self.cmdSelected)
-        cmd_term_layout_b.addWidget(cal_rb)        
+        cmd_term_layout_a.addWidget(cal_rb)        
         
         sim_act_rb = CommandRadioButton('SIM - Simulation mode ACTIVATE', self)
         sim_act_rb.toggled.connect(self.cmdSelected)
-        cmd_term_layout_b.addWidget(sim_act_rb) 
+        cmd_term_layout_c.addWidget(sim_act_rb) 
         
         sim_en_rb = CommandRadioButton('SIM - Simulation mode ENABLE', self)
         sim_en_rb.toggled.connect(self.cmdSelected)
-        cmd_term_layout_b.addWidget(sim_en_rb)
+        cmd_term_layout_c.addWidget(sim_en_rb)
         
         sim_dis_rb = CommandRadioButton('SIM - Simulation mode DISABLE', self)
         sim_dis_rb.toggled.connect(self.cmdSelected)
-        cmd_term_layout_b.addWidget(sim_dis_rb)
+        cmd_term_layout_c.addWidget(sim_dis_rb)
         
         rstpkt_rb = CommandRadioButton('RSTPKT - Reset Packet Count', self)
         rstpkt_rb.toggled.connect(self.cmdSelected)
         cmd_term_layout_b.addWidget(rstpkt_rb)
+        
+        dtch_rb = CommandRadioButton('DTCH - Detach Nose Cone', self)
+        dtch_rb.toggled.connect(self.cmdSelected)
+        cmd_term_layout_c.addWidget(dtch_rb)
+        
+        open_rb = CommandRadioButton('OPEN - Open Nose Cone Latch', self)
+        open_rb.toggled.connect(self.cmdSelected)
+        cmd_term_layout_c.addWidget(open_rb)  
+        
+        close_rb = CommandRadioButton('CLOSE - Close Nose Cone Latch', self)
+        close_rb.toggled.connect(self.cmdSelected)
+        cmd_term_layout_c.addWidget(close_rb)   
         
         self.current_cmd = telem_on_rb #initialize as a random radio button for now
         #boolean values to check for simulation mode
@@ -264,15 +266,16 @@ class MainWindow(QMainWindow):
         widget = QWidget()
         widget.setLayout(main_layout)
         self.setCentralWidget(widget)
-        self.setGeometry(0,40,1950,950)
+        self.setGeometry(0,40,800,300)
         
         """
         Should connect to Xbee when click the start button or start the screen?
         """        
         try:
             self.xbee.connect(port)
+            
         except: 
-            self.setWindowTitle("Telemetry Screen V3 - Xbee NOT connected")
+            self.setWindowTitle("TestCMDScreen - Xbee NOT connected")
             self.start_button.setEnabled(False)
             self.stop_button.setEnabled(False)
         
@@ -378,9 +381,9 @@ class MainWindow(QMainWindow):
         self.HS_dpl_lbl.setText(incoming_packet[self.telemetry_points['HS_DEPLOYED']])
         self.PC_dpl_lbl.setText(incoming_packet[self.telemetry_points['PC_DEPLOYED']])
         self.cmd_echo_lbl.setText(incoming_packet[self.telemetry_points['CMD_ECHO']])
-  
         alt = float(incoming_packet[self.telemetry_points['ALTITUDE']])
         gps_alt = float(incoming_packet[self.telemetry_points['GPS_ALTITUDE']])
+        """
         self.alt_graph.updatePlot([alt,gps_alt])        
 
         speed = float(incoming_packet[self.telemetry_points['AIR_SPEED']])
@@ -405,6 +408,7 @@ class MainWindow(QMainWindow):
         
         z = float(incoming_packet[self.telemetry_points['ROT_Z']])
         self.rot_graph.updatePlot([z])
+        """
                
     def sendCommand(self):
         """
@@ -432,6 +436,12 @@ class MainWindow(QMainWindow):
             command = self.cmd_helper.cmdCalAlt()
         elif cmd_name == "RSTPKT":
             command = self.cmd_helper.cmdResetPkt()
+        elif cmd_name == "DTCH":
+            command = self.cmd_helper.cmdServo("DTCH")
+        elif cmd_name == "OPEN":
+            command = self.cmd_helper.cmdServo("OPEN")
+        elif cmd_name == "CLOSE":
+                command = self.cmd_helper.cmdServo("CLOSE")
         elif cmd_name == "SIM":
             command = self.cmd_helper.cmdSimMode(option)
             if option == "ENABLE":
@@ -493,12 +503,13 @@ class MainWindow(QMainWindow):
             cmd = self.cmd_helper.cmdSimP(pressure)
             #use xbee helper to send next value
             self.xbee.sendData(cmd)
-        
+     
+    """
     def clearPlots(self):
-        """
+        
         clear all plots (and maybe labels?) when start button is pressed
         TODO: TEST THIS
-        """
+     
         self.pressure_graph.reset()
         self.alt_graph.reset()
         self.speed_pitot_graph.reset()
@@ -508,3 +519,5 @@ class MainWindow(QMainWindow):
         self.GPS_graph.reset()
         self.tilt_graph.reset()
         self.rot_graph.reset()
+        
+    """
