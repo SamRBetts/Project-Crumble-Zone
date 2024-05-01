@@ -10,7 +10,7 @@
   #include <DFRobot_INA219.h>
   #include <NMEAGPS.h>
   #include <TimeLib.h>
-  #include <Servo.h>
+  #include <PWMServo.h>
   #include <Wire.h>
   #include <SPI.h>
   #include <SD.h>
@@ -31,7 +31,7 @@
   bool isOnGround;
 
 //payload telemetry transmission state
-bool isTelemetryTransmissionOn;
+bool isTelemetryTransmissionOn = true;
 
 //simulation states
 bool isSimEnabled;
@@ -42,16 +42,20 @@ bool isBeaconActivated;
 
 //solenoid pin
 #define solPin 2
+#define parachuteLatchDuration 100
+uint32_t solenoidStartTime;
+bool isSolenoidActivated;
 
 //audio beacon pin
 #define buzPin 3
 
 //servo
 #define servoPin 6
-#define deployDuration 0.25 //in seconds. change if needed
+#define detatchDuration 6333 //in milliseconds. change if needed
 uint32_t servoStartTime;
-bool isServoMoving;
-Servo servo;
+bool isServoMovingForwards;
+bool isServoMovingBackwards;
+PWMServo servo;
 
 //wattmeter
   DFRobot_INA219_IIC ina219(&Wire, INA219_I2C_ADDRESS4);
@@ -291,7 +295,7 @@ class PitotTube {
           Serial.println("Slate");
           break;
         default:
-          Serial.println("Error");
+          Serial.println("Airspeed Sensor Error");
           break;
       }
 
@@ -331,7 +335,7 @@ class XBeeCommunication {
     }
 
     void transmitPacket(String s) {
-      xbeePort.print(s);
+      xbeePort.println(s);
     }
 
     String recieveInstructions() {
@@ -613,7 +617,7 @@ void collectData() {
   sensors_event_t mag; 
   accelGy.lis3mdl.getEvent(&mag);
 
-  Serial.println(mag.magnetic.z);
+  //Serial.println(mag.magnetic.z);
   
   TILT_X = atan2(-(mag.magnetic.z + 18.07),mag.magnetic.x - 18.23) * RAD_TO_DEG;
   TILT_Y = atan2(-(mag.magnetic.z + 18.07),mag.magnetic.y + 20.58) * RAD_TO_DEG;
@@ -716,6 +720,7 @@ void executeCommand(String cmd) {
   
   if(cmd.substring(9).equals("CX,ON")) {
     isTelemetryTransmissionOn = true;
+    PACKET_COUNT = 0;
   }
   if(cmd.substring(9).equals("CX,OFF")) {
     isTelemetryTransmissionOn = false;
@@ -794,6 +799,38 @@ void executeCommand(String cmd) {
     PACKET_COUNT = 0;
   }
 
+  //Nose cone detatch test command
+  if(cmd.substring(9).equals("DTCH")) {  
+    detatchTest();
+  }
+
+  if(cmd.substring(9).equals("OPEN")) {  
+    servo.write(180); // rotate forward
+    delay(detatchDuration);
+    servo.write(90); // stop
+  }
+
+  if(cmd.substring(9).equals("CLOSE")) {  
+    servo.write(0); // rotate backward
+    delay(detatchDuration);
+    servo.write(90); // stop
+  }
+
+  if(cmd.substring(0,20).equals("CMD,2033,SERVO,DOWN,")) {  
+    servo.write(180); // rotate forward 
+    delay(cmd.substring(20).toInt());
+    servo.write(90); // stop
+  }
+
+  if(cmd.substring(0,18).equals("CMD,2033,SERVO,UP,")) {  
+    servo.write(0); // rotate backward 
+    delay(cmd.substring(18).toInt());
+    servo.write(90); // stop
+  }
+
+
+
+
   String cmdNoComma;
   for(uint8_t i = 9; i < cmd.length(); i++) {
     char c = cmd.charAt(i);
@@ -802,6 +839,12 @@ void executeCommand(String cmd) {
     }
   }
   CMD_ECHO = cmdNoComma;
+}
+
+void detatchTest() {
+  isServoMovingForwards = true;
+  servoStartTime = millis();
+  servo.write(180); // rotate forward
 }
 
 void collectAndSave() {
@@ -834,7 +877,10 @@ void sendStoreReceive() {
 
 void setup() {
 
-  Serial.begin(9600); while (!Serial)
+  pinMode(LED_BUILTIN,OUTPUT);
+  digitalWrite(LED_BUILTIN,HIGH);
+
+  Serial.begin(9600);
   Wire.begin();
 
   delay(50);
@@ -863,13 +909,14 @@ void setup() {
   }
   
   servo.attach(servoPin);
-
+  
   timer1.begin(collectAndSave,  100000); //  10 Hz interval
   timer2.begin(sendStoreReceive,1000000); // 1 Hz interval
+
+  
 }
 
 void loop() {
-
 
   //state machine
   if(isBeforeLaunch) {
@@ -902,7 +949,9 @@ void loop() {
       isFastDescent = true;
 
       //turn on audio beacon
-      digitalWrite(buzPin, HIGH);
+      if(! isSimActivated) {
+        digitalWrite(buzPin, HIGH);
+      }
       
       //Skirt (Heatshield) passivley deploys
       HS_DEPLOYED = 'P';
@@ -915,14 +964,16 @@ void loop() {
       isSlowDescent = true;
 
       //release parachute housing lid to deploy parachute
+      isSolenoidActivated = true;
+      solenoidStartTime = millis();
       digitalWrite(solPin, HIGH);
       PC_DEPLOYED = 'C';
 
       //release skirt and nosecone
       //servo timer start
-      isServoMoving = true;
+      isServoMovingForwards = true;
       servoStartTime = millis();
-      servo.write(180); // move forward
+      servo.write(180); // rotate forward
     }
   }else if(isSlowDescent) {
 
@@ -951,14 +1002,31 @@ void loop() {
 
   }
 
-  if(isServoMoving) {
-    if(millis() - servoStartTime > deployDuration) {
-      servo.write(90); //stop
+  //turn off solenoid after parachute deploy
+  if(isSolenoidActivated) {
+    if(millis() - solenoidStartTime > parachuteLatchDuration) {
+      digitalWrite(solPin,LOW);
+      isSolenoidActivated = false;
     }
   }
 
+  //move servo
+  if(isServoMovingForwards) {
+    if(millis() - servoStartTime > detatchDuration) {
+      servoStartTime = millis();
+      servo.write(0); //rotate backwards
+      isServoMovingForwards = false;
+      isServoMovingBackwards = true;
+    }
+  }
 
-
+  if(isServoMovingBackwards) {
+    if(millis() - servoStartTime > detatchDuration * 1.03) {
+      servoStartTime = millis();
+      servo.write(90); //stop
+      isServoMovingBackwards = false;
+    }
+  }
 
   //gps loop
 

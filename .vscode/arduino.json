@@ -1,5 +1,7 @@
 {
     "sketch": "FlightSoftware\\FlightSoftware.ino",
     "configuration": "usb=serial,speed=600,opt=o2std,keys=en-us",
-    "board": "teensy:avr:teensy41"
+    "board": "teensy:avr:teensy41",
+    "output": "C:\\Users\\kessistj\\Desktop\\ArduinoOutput",
+    "port": "COM5"
 }

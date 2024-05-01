@@ -12,8 +12,22 @@
             ],
             "intelliSenseMode": "gcc-x64",
             "includePath": [
-                "C:\\Users\\kessistj\\AppData\\Local\\Temp\\arduino\\sketches\\AF97CF74D05F1CC9DECAAA380A4793D5\\pch",
-                "C:\\Users\\kessistj\\AppData\\Local\\Arduino15\\packages\\teensy\\hardware\\avr\\1.58.1\\cores\\teensy4",
+                "C:\\Users\\kessistj\\Desktop\\ArduinoOutput\\pch",
+                "C:\\Users\\kessistj\\AppData\\Local\\Arduino15\\packages\\teensy\\hardware\\avr\\1.59.0\\cores\\teensy4",
+                "C:\\Users\\kessistj\\Documents\\Arduino\\libraries\\Adafruit_LSM6DS",
+                "C:\\Users\\kessistj\\Documents\\Arduino\\libraries\\Adafruit_BusIO",
+                "C:\\Users\\kessistj\\AppData\\Local\\Arduino15\\packages\\teensy\\hardware\\avr\\1.59.0\\libraries\\Wire",
+                "C:\\Users\\kessistj\\AppData\\Local\\Arduino15\\packages\\teensy\\hardware\\avr\\1.59.0\\libraries\\SPI",
+                "C:\\Users\\kessistj\\Documents\\Arduino\\libraries\\Adafruit_Unified_Sensor",
+                "C:\\Users\\kessistj\\Documents\\Arduino\\libraries\\Adafruit_LIS3MDL",
+                "C:\\Users\\kessistj\\Documents\\Arduino\\libraries\\Adafruit_BMP3XX_Library",
+                "C:\\Users\\kessistj\\AppData\\Local\\Arduino15\\packages\\teensy\\hardware\\avr\\1.59.0\\libraries\\SoftwareSerial",
+                "C:\\Users\\kessistj\\Documents\\Arduino\\libraries\\DFRobot_INA219",
+                "C:\\Users\\kessistj\\Documents\\Arduino\\libraries\\NeoGPS\\src",
+                "C:\\Users\\kessistj\\AppData\\Local\\Arduino15\\packages\\teensy\\hardware\\avr\\1.59.0\\libraries\\Time",
+                "C:\\Users\\kessistj\\AppData\\Local\\Arduino15\\packages\\teensy\\hardware\\avr\\1.59.0\\libraries\\PWMServo",
+                "C:\\Users\\kessistj\\AppData\\Local\\Arduino15\\packages\\teensy\\hardware\\avr\\1.59.0\\libraries\\SD\\src",
+                "C:\\Users\\kessistj\\AppData\\Local\\Arduino15\\packages\\teensy\\hardware\\avr\\1.59.0\\libraries\\SdFat\\src",
                 "c:\\users\\kessistj\\appdata\\local\\arduino15\\packages\\teensy\\tools\\teensy-compile\\11.3.1\\arm\\arm-none-eabi\\include\\c++\\11.3.1",
                 "c:\\users\\kessistj\\appdata\\local\\arduino15\\packages\\teensy\\tools\\teensy-compile\\11.3.1\\arm\\arm-none-eabi\\include\\c++\\11.3.1\\arm-none-eabi",
                 "c:\\users\\kessistj\\appdata\\local\\arduino15\\packages\\teensy\\tools\\teensy-compile\\11.3.1\\arm\\arm-none-eabi\\include\\c++\\11.3.1\\backward",
@@ -22,13 +36,13 @@
                 "c:\\users\\kessistj\\appdata\\local\\arduino15\\packages\\teensy\\tools\\teensy-compile\\11.3.1\\arm\\arm-none-eabi\\include"
             ],
             "forcedInclude": [
-                "C:\\Users\\kessistj\\AppData\\Local\\Temp\\arduino\\sketches\\AF97CF74D05F1CC9DECAAA380A4793D5\\pch\\Arduino.h"
+                "C:\\Users\\kessistj\\Desktop\\ArduinoOutput\\pch\\Arduino.h"
             ],
             "cStandard": "c11",
-            "cppStandard": "c++14",
+            "cppStandard": "c++17",
             "defines": [
                 "__IMXRT1062__",
-                "TEENSYDUINO=158",
+                "TEENSYDUINO=159",
                 "ARDUINO=10607",
                 "ARDUINO_TEENSY41",
                 "F_CPU=600000000",
