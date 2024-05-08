@@ -42,7 +42,7 @@ bool isBeaconActivated;
 
 //solenoid pin
 #define solPin 2
-#define parachuteLatchDuration 100
+#define parachuteLatchDuration 500
 uint32_t solenoidStartTime;
 bool isSolenoidActivated;
 
@@ -183,6 +183,12 @@ class AccelGyroMag {
     #define LIS3MDL_MISO 12
     #define LIS3MDL_MOSI 11
     #define LIS3MDL_CS 10
+    const float hard_iron[3] = {24.52,-21.73,-12.29};
+    const float soft_iron[3][3] = {
+                                   {1.004, 0.019, -0.026},
+                                   {0.019, 1.009, -0.004},
+                                   {-0.026, -0.004, 0.988}
+                                  };
     Adafruit_LSM6DSOX sox;
     Adafruit_LIS3MDL lis3mdl;
 
@@ -618,9 +624,25 @@ void collectData() {
   accelGy.lis3mdl.getEvent(&mag);
 
   //Serial.println(mag.magnetic.z);
+
+  float hi_cal[3];
+  float mag_data[3] = {mag.magnetic.x, mag.magnetic.y, mag.magnetic.z};
+
+  //hard iron calibration
+  for(uint8_t i = 0; i < 3; i++)
+  {
+    hi_cal[i] = mag_data[i] - accelGy.hard_iron[i];
+  }
+
+  //soft iron calibration
+  for(uint8_t i = 0; i < 3; i++) {
+    mag_data[i] = (accelGy.soft_iron[i][0] * hi_cal[0]) +
+                  (accelGy.soft_iron[i][1] * hi_cal[1]) +
+                  (accelGy.soft_iron[i][2] * hi_cal[2]);
+  }
   
-  TILT_X = atan2(-(mag.magnetic.z + 18.07),mag.magnetic.x - 18.23) * RAD_TO_DEG;
-  TILT_Y = atan2(-(mag.magnetic.z + 18.07),mag.magnetic.y + 20.58) * RAD_TO_DEG;
+  TILT_X = atan2(-mag_data[2], mag_data[0]) * RAD_TO_DEG - 90;
+  TILT_Y = atan2(-mag_data[2], mag_data[1]) * RAD_TO_DEG - 90;
 
   //i dont think this works but it was worth a try
   //TILT_X =  mag.magnetic.roll
@@ -785,6 +807,8 @@ void executeCommand(String cmd) {
   }
   if(cmd.substring(9).equals("PR,ON")) {
 
+    isSolenoidActivated = true;
+    solenoidStartTime = millis();
     digitalWrite(solPin, HIGH);
   }
 
@@ -912,7 +936,6 @@ void setup() {
   
   timer1.begin(collectAndSave,  100000); //  10 Hz interval
   timer2.begin(sendStoreReceive,1000000); // 1 Hz interval
-
   
 }
 
